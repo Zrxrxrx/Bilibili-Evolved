@@ -2,11 +2,14 @@ import { childListSubtree, urlChange, videoChange } from '@/core/observer'
 import { createDividerController, DividerController, SplitState } from './divider'
 import {
   capturePlacement,
+  collectAllManagedPageRoots,
   CONFIG,
   isSupportedVideoUrl,
   Placement,
   queryUnique,
   resolveNodes,
+  resolveManagedPageRoot,
+  resolveManagedSlotResult,
   restoreManagedPayload,
   SELECTORS,
 } from './dom'
@@ -29,6 +32,7 @@ interface SessionNodes {
 
 interface LayoutSession {
   attachDelayedNodes: () => void
+  hasReplacementPageRoot: () => boolean
   isHealthy: () => boolean
   stop: () => void
 }
@@ -72,6 +76,9 @@ const createLayoutSession = (
   const emptySources = new Set<HTMLElement>()
   const shell = createSplitViewShell()
   const sessionAbortController = new AbortController()
+  const rootHadActive = document.documentElement.classList.contains('bsv-active')
+  const pageHadClass = pageRoot.classList.contains('bsv-page-root')
+  const headerHadHidden = header?.classList.contains('bsv-hidden') ?? false
   let currentAuthor = author
   let currentComments = comments
   let stopped = false
@@ -82,7 +89,11 @@ const createLayoutSession = (
   let stopSizeObserver = lodash.noop
 
   const markEmpty = (element: HTMLElement | null) => {
-    if (element && element.childElementCount === 0) {
+    if (
+      element &&
+      element.childElementCount === 0 &&
+      !element.classList.contains('bsv-source-empty')
+    ) {
       emptySources.add(element)
       element.classList.add('bsv-source-empty')
     }
@@ -125,8 +136,24 @@ const createLayoutSession = (
       mode === SplitViewPlayerMode.Fullscreen || Boolean(document.fullscreenElement)
     shell.shell.classList.toggle('bsv-player-expanded', webFullscreen)
     shell.shell.classList.toggle('bsv-player-wide', wideScreen)
-    header?.classList.toggle('bsv-hidden', webFullscreen)
+    if (header && !headerHadHidden) {
+      header.classList.toggle('bsv-hidden', webFullscreen)
+    }
     notifyResize()
+  }
+
+  const hasReplacementPageRoot = () => {
+    const pageSource = pagePlacement?.parent
+    if (!(pageSource instanceof Element) || !pageSource.isConnected) {
+      return false
+    }
+    return collectAllManagedPageRoots(pageSource).some(
+      candidate =>
+        !shell.shell.contains(candidate) &&
+        candidate !== pageRoot &&
+        !candidate.contains(pageRoot) &&
+        !pageRoot.contains(candidate),
+    )
   }
 
   const attachAuthor = (node: HTMLElement) => {
@@ -177,27 +204,62 @@ const createLayoutSession = (
     divider?.stop()
     stopSizeObserver()
     stopModeObserver()
-    header?.classList.remove('bsv-hidden')
-    restoreManagedPayload(
-      authorPlacement,
-      [authorPlacement?.node],
-      authorPlacement?.node ?? null,
-      true,
-      pageRoot,
+    const replacementPageRootExists = hasReplacementPageRoot()
+    const pagePayload = [...shell.leftScroll.children]
+    const playerPayload = [...shell.playerSlot.children]
+    const commentsPayload = [...shell.commentsScroll.children].filter(
+      node => node !== shell.commentsWaiting,
     )
-    restoreManagedPayload(
-      commentsPlacement,
-      [commentsPlacement?.node],
-      commentsPlacement?.node ?? null,
-      true,
-      pageRoot,
-    )
-    restoreManagedPayload(playerPlacement, [player], player, true, pageRoot)
-    restoreManagedPayload(pagePlacement, [pageRoot], pageRoot, true, document.body)
-    emptySources.forEach(element => element.classList.remove('bsv-source-empty'))
-    pageRoot.classList.remove('bsv-page-root')
-    document.documentElement.classList.remove('bsv-active', 'bsv-dragging')
-    shell.shell.remove()
+    const authorPayload = [...shell.authorCard.children]
+    const managedPageRoot = resolveManagedPageRoot(shell.leftScroll, pageRoot)
+    const managedPlayer = resolveManagedSlotResult(shell.playerSlot, SELECTORS.player, player).node
+    const managedComments = resolveManagedSlotResult(
+      shell.commentsScroll,
+      SELECTORS.comments,
+      currentComments,
+      'bsv-comments-waiting',
+    ).node
+    const managedAuthor = resolveManagedSlotResult(
+      shell.authorCard,
+      SELECTORS.author,
+      currentAuthor,
+    ).node
+    const cleanupTasks: Array<() => void> = [
+      () => shell.commentsWaiting.remove(),
+      () => {
+        if (!replacementPageRootExists) {
+          restoreManagedPayload(authorPlacement, authorPayload, managedAuthor, true, pageRoot)
+          restoreManagedPayload(commentsPlacement, commentsPayload, managedComments, true, pageRoot)
+          restoreManagedPayload(playerPlacement, playerPayload, managedPlayer, true, pageRoot)
+          restoreManagedPayload(pagePlacement, pagePayload, managedPageRoot, true, document.body)
+        }
+      },
+      () => emptySources.forEach(element => element.classList.remove('bsv-source-empty')),
+      () => {
+        if (!pageHadClass) {
+          pageRoot.classList.remove('bsv-page-root')
+        }
+      },
+      () => {
+        if (!rootHadActive) {
+          document.documentElement.classList.remove('bsv-active')
+        }
+        document.documentElement.classList.remove('bsv-dragging')
+      },
+      () => {
+        if (header && !headerHadHidden) {
+          header.classList.remove('bsv-hidden')
+        }
+      },
+      () => shell.shell.remove(),
+    ]
+    cleanupTasks.forEach(task => {
+      try {
+        task()
+      } catch (error) {
+        console.warn('[videoSplitView] layout cleanup failed', error)
+      }
+    })
   }
 
   try {
@@ -255,6 +317,7 @@ const createLayoutSession = (
 
   return {
     attachDelayedNodes,
+    hasReplacementPageRoot,
     isHealthy: () =>
       shell.shell.isConnected &&
       shell.playerSlot.contains(player) &&
@@ -302,7 +365,9 @@ export const createSplitViewController = (): SplitViewController => {
       stopSession()
       return
     }
-    if (session?.isHealthy()) {
+    if (session?.hasReplacementPageRoot()) {
+      stopSession()
+    } else if (session?.isHealthy()) {
       session.attachDelayedNodes()
       return
     }
