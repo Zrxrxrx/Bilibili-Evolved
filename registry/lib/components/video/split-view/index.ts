@@ -1,4 +1,18 @@
 import { defineComponentMetadata } from '@/components/define'
+import { createSplitViewController, SplitViewController } from './controller'
+
+let controller: SplitViewController | null = null
+
+const load = () => {
+  controller?.stop()
+  controller = createSplitViewController()
+  controller.start()
+}
+
+const unload = () => {
+  controller?.stop()
+  controller = null
+}
 
 export const component = defineComponentMetadata({
   name: 'videoSplitView',
@@ -15,5 +29,7 @@ export const component = defineComponentMetadata({
       style: () => import('./video-split-view.scss'),
     },
   ],
-  entry: none,
+  entry: load,
+  reload: load,
+  unload,
 })
