@@ -25,7 +25,7 @@ interface SessionNodes {
   author: HTMLElement | null
   comments: HTMLElement | null
   header: HTMLElement | null
-  media: HTMLVideoElement
+  media: HTMLElement
   pageRoot: HTMLElement
   player: HTMLElement
 }
@@ -105,7 +105,9 @@ const createLayoutSession = (
       return
     }
     const ratio =
-      media.videoWidth > 0 && media.videoHeight > 0 ? media.videoWidth / media.videoHeight : 16 / 9
+      media instanceof HTMLVideoElement && media.videoWidth > 0 && media.videoHeight > 0
+        ? media.videoWidth / media.videoHeight
+        : 16 / 9
     const sendingBarHeight =
       (dq(player, '.bpx-player-sending-bar') as HTMLElement | null)?.getBoundingClientRect()
         .height ?? 0

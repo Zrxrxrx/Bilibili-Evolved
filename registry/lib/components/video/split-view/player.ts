@@ -12,7 +12,7 @@ export enum SplitViewPlayerMode {
 
 export interface SplitViewPlayer {
   container: HTMLElement
-  media: HTMLVideoElement
+  media: HTMLElement
 }
 
 const readPlayerMode = () => {
@@ -37,7 +37,7 @@ export const waitForSplitViewPlayer = async (
   }
   return {
     container,
-    media: media as HTMLVideoElement,
+    media,
   }
 }
 
