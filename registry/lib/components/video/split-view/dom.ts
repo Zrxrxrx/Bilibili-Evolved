@@ -7,9 +7,7 @@ export const CONFIG = Object.freeze({
   minRightWidth: 320,
   dividerWidth: 10,
   minLeftScrollHeight: 180,
-  routePollMs: 500,
   reconcileDelayMs: 50,
-  playerStabilityMs: 3_000,
 })
 
 export const SELECTORS = Object.freeze({
@@ -19,16 +17,6 @@ export const SELECTORS = Object.freeze({
   comments: ['#commentapp', '#comment', '.comment-container'],
   author: ['.up-panel-container'],
   commentAnchor: ['#commentapp', '#comment', '[data-module="comment"]'],
-  webFullscreen: [
-    '.bpx-state-web',
-    '[data-screen="web"]',
-    '.bpx-player-ctrl-web.bpx-state-entered',
-  ],
-  wideScreen: [
-    '.bpx-state-wide',
-    '[data-screen="wide"]',
-    '.bpx-player-ctrl-wide.bpx-state-entered',
-  ],
 })
 
 export const MANAGED_PAGE_ROOT_SELECTORS = Object.freeze([
@@ -104,13 +92,6 @@ export const videoIdentity = (href: string) => {
 
 export const isPlayerReady = (player: Element | null | undefined) =>
   Boolean(player && dq(player, 'video'))
-
-export const calculateLeftWidth = (shellWidth: number, pointerX: number, config = CONFIG) => {
-  const ratio = Math.min(config.maxLeftRatio, Math.max(config.minLeftRatio, pointerX / shellWidth))
-  const ratioWidth = ratio * shellWidth
-  const maxByRightPane = shellWidth - config.minRightWidth - config.dividerWidth
-  return Math.min(maxByRightPane, Math.max(config.minLeftWidth, ratioWidth))
-}
 
 export const queryUniqueResult = (
   scope: QueryScope | null | undefined,

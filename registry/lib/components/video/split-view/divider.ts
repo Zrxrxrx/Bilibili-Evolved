@@ -1,11 +1,4 @@
-export interface DividerConfig {
-  defaultLeftRatio: number
-  minLeftRatio: number
-  maxLeftRatio: number
-  minLeftWidth: number
-  minRightWidth: number
-  dividerWidth: number
-}
+import { CONFIG } from './dom'
 
 export interface SplitState {
   ratio: number
@@ -17,24 +10,11 @@ export interface DividerController {
   stop: () => void
 }
 
-export const defaultDividerConfig: Readonly<DividerConfig> = Object.freeze({
-  defaultLeftRatio: 0.64,
-  minLeftRatio: 0.42,
-  maxLeftRatio: 0.72,
-  minLeftWidth: 420,
-  minRightWidth: 320,
-  dividerWidth: 10,
-})
-
-export const calculateLeftWidth = (
-  shellWidth: number,
-  pointerX: number,
-  config: DividerConfig = defaultDividerConfig,
-) => {
-  const ratio = lodash.clamp(pointerX / shellWidth, config.minLeftRatio, config.maxLeftRatio)
+const calculateLeftWidth = (shellWidth: number, pointerX: number) => {
+  const ratio = lodash.clamp(pointerX / shellWidth, CONFIG.minLeftRatio, CONFIG.maxLeftRatio)
   const ratioWidth = ratio * shellWidth
-  const maxByRightPane = shellWidth - config.minRightWidth - config.dividerWidth
-  return Math.min(maxByRightPane, Math.max(config.minLeftWidth, ratioWidth))
+  const maxByRightPane = shellWidth - CONFIG.minRightWidth - CONFIG.dividerWidth
+  return Math.min(maxByRightPane, Math.max(CONFIG.minLeftWidth, ratioWidth))
 }
 
 export const createDividerController = (
@@ -42,9 +22,8 @@ export const createDividerController = (
   shell: HTMLElement,
   divider: HTMLElement,
   notifyResize: () => void,
-  splitState: SplitState = { ratio: defaultDividerConfig.defaultLeftRatio },
+  splitState: SplitState = { ratio: CONFIG.defaultLeftRatio },
   isSuspended: () => boolean = () => false,
-  config: DividerConfig = defaultDividerConfig,
 ): DividerController => {
   let activePointerId: number | null = null
   let stopped = false
@@ -60,10 +39,10 @@ export const createDividerController = (
     const relativeX = pointerX - rect.left
     splitState.ratio = lodash.clamp(
       relativeX / rect.width,
-      config.minLeftRatio,
-      config.maxLeftRatio,
+      CONFIG.minLeftRatio,
+      CONFIG.maxLeftRatio,
     )
-    const leftWidth = calculateLeftWidth(rect.width, rect.width * splitState.ratio, config)
+    const leftWidth = calculateLeftWidth(rect.width, rect.width * splitState.ratio)
     shell.style.setProperty('--bsv-left-width', `${leftWidth}px`)
     notifyResize()
   }
@@ -73,7 +52,7 @@ export const createDividerController = (
       return
     }
     const rect = getShellRect()
-    const leftWidth = calculateLeftWidth(rect.width, rect.width * splitState.ratio, config)
+    const leftWidth = calculateLeftWidth(rect.width, rect.width * splitState.ratio)
     shell.style.setProperty('--bsv-left-width', `${leftWidth}px`)
     notifyResize()
   }
