@@ -1,7 +1,11 @@
-import { PlayerMode } from '@/components/video/player-adaptor'
 import { childListSubtree, urlChange, videoChange } from '@/core/observer'
 import { createDividerController, SplitState } from './divider'
-import { observePlayerMode, observePlayerSize, waitForSplitViewPlayer } from './player'
+import {
+  observePlayerMode,
+  observePlayerSize,
+  SplitViewPlayerMode,
+  waitForSplitViewPlayer,
+} from './player'
 import { createSplitViewShell } from './shell'
 
 const minViewportWidth = 960
@@ -152,10 +156,11 @@ const createLayoutSession = (
     })
   }
 
-  const setPlayerMode = (mode: PlayerMode) => {
-    const webFullscreen = mode === PlayerMode.WebFullscreen
-    const wideScreen = mode === PlayerMode.WideScreen
-    nativeFullscreen = mode === PlayerMode.Fullscreen || Boolean(document.fullscreenElement)
+  const setPlayerMode = (mode: SplitViewPlayerMode) => {
+    const webFullscreen = mode === SplitViewPlayerMode.WebFullscreen
+    const wideScreen = mode === SplitViewPlayerMode.WideScreen
+    nativeFullscreen =
+      mode === SplitViewPlayerMode.Fullscreen || Boolean(document.fullscreenElement)
     shell.shell.classList.toggle('bsv-player-expanded', webFullscreen)
     shell.shell.classList.toggle('bsv-player-wide', wideScreen)
     header?.classList.toggle('bsv-hidden', webFullscreen)

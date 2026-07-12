@@ -1,7 +1,14 @@
 import { playerAgent } from '@/components/video/player-agent'
-import { PlayerMode } from '@/components/video/player-adaptor'
 import { sizeChange } from '@/core/observer'
 import { playerReady } from '@/core/utils'
+
+export enum SplitViewPlayerMode {
+  Normal = 'normal',
+  WideScreen = 'wide',
+  WebFullscreen = 'web',
+  Fullscreen = 'full',
+  Mini = 'mini',
+}
 
 export interface SplitViewPlayer {
   container: HTMLElement
@@ -10,8 +17,8 @@ export interface SplitViewPlayer {
 
 const readPlayerMode = () => {
   const container = dq('.bpx-player-container') as HTMLElement | null
-  const mode = container?.dataset.screen as PlayerMode | undefined
-  return Object.values(PlayerMode).includes(mode) ? mode : PlayerMode.Normal
+  const mode = container?.dataset.screen as SplitViewPlayerMode | undefined
+  return Object.values(SplitViewPlayerMode).includes(mode) ? mode : SplitViewPlayerMode.Normal
 }
 
 export const waitForSplitViewPlayer = async (
@@ -25,11 +32,7 @@ export const waitForSplitViewPlayer = async (
     playerAgent.query.bilibiliPlayer(),
     playerAgent.query.video.element(),
   ])
-  if (
-    signal?.aborted ||
-    !(container instanceof HTMLElement) ||
-    !(media instanceof HTMLElement)
-  ) {
+  if (signal?.aborted || !(container instanceof HTMLElement) || !(media instanceof HTMLElement)) {
     return null
   }
   return {
@@ -39,10 +42,10 @@ export const waitForSplitViewPlayer = async (
 }
 
 export const observePlayerMode = (
-  callback: (mode: PlayerMode) => void,
+  callback: (mode: SplitViewPlayerMode) => void,
   signal?: AbortSignal,
 ) => {
-  const handler = (event: CustomEvent<{ mode: PlayerMode }>) => callback(event.detail.mode)
+  const handler = (event: CustomEvent<{ mode: SplitViewPlayerMode }>) => callback(event.detail.mode)
   callback(readPlayerMode())
   window.addEventListener('playerModeChange', handler as EventListener, { signal })
   return () => window.removeEventListener('playerModeChange', handler as EventListener)
