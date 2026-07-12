@@ -4,7 +4,6 @@ export const CONFIG = Object.freeze({
   minLeftRatio: 0.42,
   maxLeftRatio: 0.72,
   minLeftWidth: 420,
-  minRightWidth: 320,
   dividerWidth: 10,
   minLeftScrollHeight: 180,
   reconcileDelayMs: 50,

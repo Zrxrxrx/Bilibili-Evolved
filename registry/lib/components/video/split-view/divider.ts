@@ -7,13 +7,14 @@ export interface SplitState {
 export interface DividerController {
   applyRatio: () => void
   cancelDrag: () => void
+  setMinRightWidth: (width: number) => void
   stop: () => void
 }
 
-const calculateLeftWidth = (shellWidth: number, pointerX: number) => {
+const calculateLeftWidth = (shellWidth: number, pointerX: number, minRightWidth: number) => {
   const ratio = lodash.clamp(pointerX / shellWidth, CONFIG.minLeftRatio, CONFIG.maxLeftRatio)
   const ratioWidth = ratio * shellWidth
-  const maxByRightPane = shellWidth - CONFIG.minRightWidth - CONFIG.dividerWidth
+  const maxByRightPane = shellWidth - minRightWidth - CONFIG.dividerWidth
   return Math.min(maxByRightPane, Math.max(CONFIG.minLeftWidth, ratioWidth))
 }
 
@@ -22,10 +23,12 @@ export const createDividerController = (
   shell: HTMLElement,
   divider: HTMLElement,
   notifyResize: () => void,
+  minRightWidth: number,
   splitState: SplitState = { ratio: CONFIG.defaultLeftRatio },
   isSuspended: () => boolean = () => false,
 ): DividerController => {
   let activePointerId: number | null = null
+  let currentMinRightWidth = minRightWidth
   let stopped = false
 
   const getShellRect = () => {
@@ -42,7 +45,11 @@ export const createDividerController = (
       CONFIG.minLeftRatio,
       CONFIG.maxLeftRatio,
     )
-    const leftWidth = calculateLeftWidth(rect.width, rect.width * splitState.ratio)
+    const leftWidth = calculateLeftWidth(
+      rect.width,
+      rect.width * splitState.ratio,
+      currentMinRightWidth,
+    )
     shell.style.setProperty('--bsv-left-width', `${leftWidth}px`)
     notifyResize()
   }
@@ -52,7 +59,11 @@ export const createDividerController = (
       return
     }
     const rect = getShellRect()
-    const leftWidth = calculateLeftWidth(rect.width, rect.width * splitState.ratio)
+    const leftWidth = calculateLeftWidth(
+      rect.width,
+      rect.width * splitState.ratio,
+      currentMinRightWidth,
+    )
     shell.style.setProperty('--bsv-left-width', `${leftWidth}px`)
     notifyResize()
   }
@@ -101,6 +112,11 @@ export const createDividerController = (
     applyRatio()
   }
 
+  const setMinRightWidth = (width: number) => {
+    currentMinRightWidth = width
+    applyRatio()
+  }
+
   const stop = () => {
     if (stopped) {
       return
@@ -128,5 +144,5 @@ export const createDividerController = (
     throw error
   }
 
-  return { applyRatio, cancelDrag, stop }
+  return { applyRatio, cancelDrag, setMinRightWidth, stop }
 }

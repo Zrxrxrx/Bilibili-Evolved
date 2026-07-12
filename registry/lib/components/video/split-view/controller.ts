@@ -31,6 +31,7 @@ interface LayoutSession {
   attachDelayedNodes: () => void
   hasReplacementPageRoot: () => boolean
   isHealthy: () => boolean
+  setMinRightWidth: (width: number) => void
   stop: () => void
 }
 
@@ -61,6 +62,7 @@ const resolveSessionNodes = async (signal: AbortSignal): Promise<SessionNodes | 
 const createLayoutSession = (
   nodes: SessionNodes,
   splitState: SplitState,
+  minRightWidth: number,
   signal: AbortSignal,
 ): LayoutSession => {
   const { author, comments, header, media, pageRoot, player } = nodes
@@ -294,6 +296,7 @@ const createLayoutSession = (
       shell.shell,
       shell.divider,
       notifyResize,
+      minRightWidth,
       splitState,
       () => nativeFullscreen,
     )
@@ -333,16 +336,18 @@ const createLayoutSession = (
       shell.leftScroll.contains(pageRoot) &&
       media.isConnected &&
       player.contains(media),
+    setMinRightWidth: width => divider?.setMinRightWidth(width),
     stop,
   }
 }
 
 export interface SplitViewController {
+  setMinRightWidth: (width: number) => void
   start: () => void
   stop: () => void
 }
 
-export const createSplitViewController = (): SplitViewController => {
+export const createSplitViewController = (minRightWidth: number): SplitViewController => {
   let abortController: AbortController | null = null
   let documentObserver: MutationObserver | null = null
   let currentVideoId: string | null = null
@@ -354,6 +359,7 @@ export const createSplitViewController = (): SplitViewController => {
   let mediaQuery: MediaQueryList | null = null
   let pendingCommentProbe: { frame: number; href: string; x: number; y: number } | null = null
   let probedVideo: string | null = null
+  let currentMinRightWidth = minRightWidth
   let splitState: SplitState = { ratio: CONFIG.defaultLeftRatio }
 
   const stopSession = () => {
@@ -443,7 +449,7 @@ export const createSplitViewController = (): SplitViewController => {
     if (maybeProbeComments(nodes)) {
       return
     }
-    session = createLayoutSession(nodes, splitState, abortController.signal)
+    session = createLayoutSession(nodes, splitState, currentMinRightWidth, abortController.signal)
   }
 
   scheduleReconcile = () => {
@@ -504,5 +510,10 @@ export const createSplitViewController = (): SplitViewController => {
     })
   }
 
-  return { start, stop }
+  const setMinRightWidth = (width: number) => {
+    currentMinRightWidth = width
+    session?.setMinRightWidth(width)
+  }
+
+  return { setMinRightWidth, start, stop }
 }
