@@ -12,6 +12,7 @@ import {
   resolveManagedSlotResult,
   restoreManagedPayload,
   SELECTORS,
+  videoIdentity,
 } from './dom'
 import {
   observePlayerMode,
@@ -342,13 +343,59 @@ export const createSplitViewController = (): SplitViewController => {
   let reconcileGeneration = 0
   let reconcileTimer = 0
   let runId = 0
+  let scheduleReconcile: () => void = lodash.noop
   let session: LayoutSession | null = null
   let mediaQuery: MediaQueryList | null = null
+  let pendingCommentProbe: { frame: number; href: string; x: number; y: number } | null = null
+  let probedVideo: string | null = null
   let splitState: SplitState = { ratio: CONFIG.defaultLeftRatio }
 
   const stopSession = () => {
     session?.stop()
     session = null
+  }
+
+  const cancelCommentProbe = (restoreScroll: boolean) => {
+    const probe = pendingCommentProbe
+    if (!probe) {
+      return
+    }
+    pendingCommentProbe = null
+    cancelAnimationFrame(probe.frame)
+    if (restoreScroll && location.href === probe.href) {
+      scrollTo(probe.x, probe.y)
+    }
+  }
+
+  const maybeProbeComments = (nodes: SessionNodes) => {
+    const identity = currentVideoId ?? videoIdentity(location.href)
+    if (nodes.comments || !identity || probedVideo === identity) {
+      return false
+    }
+    const anchor = queryUnique(nodes.pageRoot, SELECTORS.commentAnchor)
+    if (!(anchor instanceof HTMLElement)) {
+      return false
+    }
+    probedVideo = identity
+    const probe = {
+      frame: 0,
+      href: location.href,
+      x: scrollX,
+      y: scrollY,
+    }
+    anchor.scrollIntoView({ block: 'center' })
+    probe.frame = requestAnimationFrame(() => {
+      if (pendingCommentProbe !== probe) {
+        return
+      }
+      pendingCommentProbe = null
+      if (location.href === probe.href) {
+        scrollTo(probe.x, probe.y)
+        scheduleReconcile()
+      }
+    })
+    pendingCommentProbe = probe
+    return true
   }
 
   const reconcile = async (
@@ -364,6 +411,7 @@ export const createSplitViewController = (): SplitViewController => {
       return
     }
     if (!isSupportedVideoUrl(location.href) || !mediaQuery?.matches) {
+      cancelCommentProbe(true)
       stopSession()
       return
     }
@@ -386,10 +434,13 @@ export const createSplitViewController = (): SplitViewController => {
     ) {
       return
     }
+    if (maybeProbeComments(nodes)) {
+      return
+    }
     session = createLayoutSession(nodes, splitState, abortController.signal)
   }
 
-  const scheduleReconcile = () => {
+  scheduleReconcile = () => {
     const activeRunId = runId
     const generation = ++reconcileGeneration
     const expectedVideoId = currentVideoId
@@ -412,6 +463,8 @@ export const createSplitViewController = (): SplitViewController => {
     reconcileTimer = 0
     mediaQuery = null
     currentVideoId = null
+    probedVideo = null
+    cancelCommentProbe(true)
     stopSession()
   }
 
@@ -427,6 +480,8 @@ export const createSplitViewController = (): SplitViewController => {
       ({ aid, cid }) => {
         const nextVideoId = `${aid}:${cid}`
         if (currentVideoId !== null && currentVideoId !== nextVideoId) {
+          cancelCommentProbe(false)
+          probedVideo = null
           splitState = { ratio: CONFIG.defaultLeftRatio }
           stopSession()
         }
