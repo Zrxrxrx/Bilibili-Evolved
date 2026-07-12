@@ -1,0 +1,275 @@
+html.bsv-active,
+html.bsv-active body {
+  width: 100% !important;
+  height: 100% !important;
+  overflow: hidden !important;
+}
+
+#bsv-shell {
+  --bsv-left-width: 64%;
+  --bsv-top-offset: 0px;
+  --bsv-canvas: #f6f7f8;
+  --bsv-surface: var(--be-color-panel-bg, #fff);
+  --bsv-border: var(--be-color-panel-border, #e3e5e7);
+  --bsv-divider: var(--be-color-button-bg, #eef1f4);
+  --bsv-divider-border: var(--be-color-button-border, #d9dde2);
+  --bsv-divider-hover: var(--be-color-button-bg-hover, #dff6fe);
+  --bsv-text: var(--be-color-text-title, #18191c);
+  --bsv-muted: var(--be-color-text-placeholder, #9499a0);
+  --bsv-shadow: rgb(0 0 0 / 6%);
+  position: fixed;
+  inset: var(--bsv-top-offset) 0 0;
+  z-index: 1000;
+  display: flex;
+  width: 100vw;
+  height: auto;
+  overflow: hidden;
+  color: var(--bsv-text);
+  background: var(--bsv-canvas);
+}
+
+#bsv-left-pane {
+  display: flex;
+  flex: 0 0 var(--bsv-left-width);
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--bsv-surface);
+}
+
+#bsv-player-slot {
+  display: flex;
+  flex: 0 0 auto;
+  justify-content: center;
+  width: 100%;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #000;
+}
+
+#bsv-player-slot > * {
+  width: 100% !important;
+  max-width: calc(177.7778vh - 320px) !important;
+  height: var(--bsv-player-height, auto) !important;
+  aspect-ratio: auto !important;
+  margin: 0 auto !important;
+}
+
+#bsv-left-scroll,
+#bsv-comments-scroll {
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 0;
+  padding-inline: 16px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  background: var(--bsv-surface);
+}
+
+#bsv-left-scroll {
+  flex: 1 1 auto;
+}
+
+#bsv-right-pane {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--bsv-canvas);
+}
+
+#bsv-author-card {
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  min-width: 0;
+  margin: 12px 12px 0;
+  padding: 0 16px;
+  border: 1px solid var(--bsv-border);
+  border-radius: 12px;
+  background: var(--bsv-surface);
+  box-shadow: 0 2px 12px var(--bsv-shadow);
+}
+
+#bsv-author-card:empty {
+  display: none;
+}
+
+#bsv-author-card > *,
+#bsv-author-card .up-info-container {
+  box-sizing: border-box !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  margin: 0 !important;
+}
+
+#bsv-comments-scroll {
+  flex: 1 1 auto;
+  margin: 12px;
+  padding-block: 12px;
+  border: 1px solid var(--bsv-border);
+  border-radius: 12px;
+  box-shadow: 0 2px 12px var(--bsv-shadow);
+}
+
+#bsv-divider {
+  position: relative;
+  box-sizing: border-box;
+  flex: 0 0 10px;
+  width: 10px;
+  cursor: col-resize;
+  touch-action: none;
+  border-inline: 1px solid var(--bsv-divider-border);
+  background: var(--bsv-divider);
+}
+
+#bsv-divider::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 56px;
+  content: '⋮';
+  transform: translate(-50%, -50%);
+  border: 1px solid #9ddff5;
+  border-radius: 12px;
+  color: #00aeec;
+  background: var(--bsv-surface);
+}
+
+#bsv-divider:hover,
+html.bsv-dragging #bsv-divider {
+  background: var(--bsv-divider-hover);
+}
+
+html.bsv-dragging,
+html.bsv-dragging * {
+  user-select: none !important;
+}
+
+.bsv-hidden,
+.bsv-source-empty {
+  display: none !important;
+}
+
+#bsv-left-scroll > * {
+  box-sizing: border-box !important;
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding-inline: 0 !important;
+}
+
+#bsv-left-scroll > * .left-container,
+#bsv-left-scroll > * .right-container,
+#bsv-left-scroll > * .video-main,
+#bsv-left-scroll > * .video-container-v1 {
+  box-sizing: border-box !important;
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  margin-inline: 0 !important;
+}
+
+#bsv-left-scroll #playerWrap,
+#bsv-left-scroll #bilibili-player,
+#bsv-left-scroll #commentapp {
+  display: none !important;
+}
+
+#bsv-left-scroll #biliMainHeader,
+#bsv-left-scroll #biliMainHeader .bili-header.fixed-header {
+  height: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+#bsv-shell .bsv-source-empty {
+  display: none !important;
+}
+
+#bsv-comments-waiting {
+  padding: 24px;
+  color: var(--bsv-muted);
+  text-align: center;
+}
+
+#bsv-shell.bsv-player-wide #bsv-left-pane {
+  flex-basis: 100% !important;
+  width: 100% !important;
+}
+
+#bsv-shell.bsv-player-wide #bsv-divider,
+#bsv-shell.bsv-player-wide #bsv-right-pane,
+#bsv-shell.bsv-player-wide #bsv-comments-scroll {
+  display: none !important;
+}
+
+#bsv-shell.bsv-player-expanded {
+  top: 0 !important;
+  height: 100vh !important;
+}
+
+#bsv-shell.bsv-player-expanded #bsv-left-pane {
+  flex-basis: 100% !important;
+  width: 100% !important;
+}
+
+#bsv-shell.bsv-player-expanded #bsv-player-slot {
+  width: 100vw !important;
+  height: 100vh !important;
+}
+
+#bsv-shell.bsv-player-expanded #bsv-player-slot > * {
+  width: 100vw !important;
+  max-width: none !important;
+  height: 100vh !important;
+}
+
+#bsv-shell.bsv-player-expanded #bsv-left-scroll,
+#bsv-shell.bsv-player-expanded #bsv-divider,
+#bsv-shell.bsv-player-expanded #bsv-right-pane,
+#bsv-shell.bsv-player-expanded #bsv-comments-scroll {
+  display: none !important;
+}
+
+body.dark #bsv-shell {
+  --bsv-canvas: var(--be-color-panel-bg, #0f1012);
+  --bsv-surface: var(--be-color-card-bg, #18191c);
+  --bsv-border: var(--be-color-card-border, #34373b);
+  --bsv-divider: var(--be-color-button-bg, #24272b);
+  --bsv-divider-border: var(--be-color-button-border, #3b3f45);
+  --bsv-divider-hover: var(--be-color-button-bg-hover, #193746);
+  --bsv-text: var(--be-color-text-title, #e3e5e7);
+  --bsv-muted: var(--be-color-text-placeholder, #a2a7ae);
+  --bsv-shadow: rgb(0 0 0 / 35%);
+  color-scheme: dark;
+}
+
+body.dark #bsv-left-pane .bpx-player-sending-bar,
+body.dark #bsv-left-scroll .bpx-docker {
+  background: var(--bsv-surface) !important;
+}
+
+body.dark #bsv-left-pane .bpx-player-video-inputbar,
+body.dark #bsv-left-scroll .tag-link,
+body.dark #bsv-left-scroll .danmaku-wrap,
+body.dark #bsv-left-scroll .bui-collapse-header {
+  color: var(--be-color-text-content, #c9ccd0) !important;
+  background: var(--be-color-button-bg, #2f3237) !important;
+}
+
+body.dark #bsv-left-pane .bpx-player-dm-input {
+  color: var(--be-color-text-content, #c9ccd0) !important;
+}

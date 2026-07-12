@@ -9,5 +9,11 @@ export const component = defineComponentMetadata({
     link: 'https://github.com/Zrxrxrx',
   },
   urlInclude: ['//www.bilibili.com/video/'],
+  instantStyles: [
+    {
+      name: 'videoSplitView',
+      style: () => import('./video-split-view.scss'),
+    },
+  ],
   entry: none,
 })
