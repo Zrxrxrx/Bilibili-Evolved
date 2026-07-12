@@ -1,4 +1,5 @@
 import { childListSubtree, urlChange, videoChange } from '@/core/observer'
+import type { PlayerMode } from '@/components/video/player-adaptor'
 import { createDividerController, DividerController, SplitState } from './divider'
 import {
   capturePlacement,
@@ -14,12 +15,7 @@ import {
   SELECTORS,
   videoIdentity,
 } from './dom'
-import {
-  observePlayerMode,
-  observePlayerSize,
-  SplitViewPlayerMode,
-  waitForSplitViewPlayer,
-} from './player'
+import { observePlayerMode, observePlayerSize, waitForSplitViewPlayer } from './player'
 import { createSplitViewShell } from './shell'
 
 interface SessionNodes {
@@ -132,11 +128,10 @@ const createLayoutSession = (
     })
   }
 
-  const setPlayerMode = (mode: SplitViewPlayerMode) => {
-    const webFullscreen = mode === SplitViewPlayerMode.WebFullscreen
-    const wideScreen = mode === SplitViewPlayerMode.WideScreen
-    nativeFullscreen =
-      mode === SplitViewPlayerMode.Fullscreen || Boolean(document.fullscreenElement)
+  const setPlayerMode = (mode: PlayerMode) => {
+    const webFullscreen = mode === 'web'
+    const wideScreen = mode === 'wide'
+    nativeFullscreen = mode === 'full' || Boolean(document.fullscreenElement)
     shell.shell.classList.toggle('bsv-player-expanded', webFullscreen)
     shell.shell.classList.toggle('bsv-player-wide', wideScreen)
     if (header && !headerHadHidden) {
