@@ -258,7 +258,9 @@ const createLayoutSession = (
     isHealthy: () =>
       shell.shell.isConnected &&
       shell.playerSlot.contains(player) &&
-      shell.leftScroll.contains(pageRoot),
+      shell.leftScroll.contains(pageRoot) &&
+      media.isConnected &&
+      player.contains(media),
     stop,
   }
 }
@@ -271,6 +273,8 @@ export interface SplitViewController {
 export const createSplitViewController = (): SplitViewController => {
   let abortController: AbortController | null = null
   let documentObserver: MutationObserver | null = null
+  let currentVideoId: string | null = null
+  let reconcileGeneration = 0
   let reconcileTimer = 0
   let runId = 0
   let session: LayoutSession | null = null
@@ -282,8 +286,16 @@ export const createSplitViewController = (): SplitViewController => {
     session = null
   }
 
-  const reconcile = async (activeRunId: number) => {
-    if (activeRunId !== runId || abortController?.signal.aborted) {
+  const reconcile = async (
+    activeRunId: number,
+    generation: number,
+    expectedVideoId: string | null,
+  ) => {
+    if (
+      activeRunId !== runId ||
+      generation !== reconcileGeneration ||
+      abortController?.signal.aborted
+    ) {
       return
     }
     if (!isSupportedVideoUrl(location.href) || !mediaQuery?.matches) {
@@ -296,7 +308,15 @@ export const createSplitViewController = (): SplitViewController => {
     }
     stopSession()
     const nodes = await resolveSessionNodes(abortController.signal)
-    if (!nodes || activeRunId !== runId || abortController.signal.aborted) {
+    if (
+      !nodes ||
+      activeRunId !== runId ||
+      generation !== reconcileGeneration ||
+      abortController.signal.aborted ||
+      !isSupportedVideoUrl(location.href) ||
+      !mediaQuery?.matches ||
+      currentVideoId !== expectedVideoId
+    ) {
       return
     }
     session = createLayoutSession(nodes, splitState, abortController.signal)
@@ -304,9 +324,11 @@ export const createSplitViewController = (): SplitViewController => {
 
   const scheduleReconcile = () => {
     const activeRunId = runId
+    const generation = ++reconcileGeneration
+    const expectedVideoId = currentVideoId
     clearTimeout(reconcileTimer)
     reconcileTimer = window.setTimeout(() => {
-      reconcile(activeRunId).catch(error => {
+      reconcile(activeRunId, generation, expectedVideoId).catch(error => {
         console.warn('[videoSplitView] reconcile failed', error)
       })
     }, CONFIG.reconcileDelayMs)
@@ -314,6 +336,7 @@ export const createSplitViewController = (): SplitViewController => {
 
   const stop = () => {
     runId++
+    reconcileGeneration++
     abortController?.abort()
     abortController = null
     documentObserver?.disconnect()
@@ -321,6 +344,7 @@ export const createSplitViewController = (): SplitViewController => {
     clearTimeout(reconcileTimer)
     reconcileTimer = 0
     mediaQuery = null
+    currentVideoId = null
     stopSession()
   }
 
@@ -333,15 +357,21 @@ export const createSplitViewController = (): SplitViewController => {
     ;[documentObserver] = childListSubtree(document, scheduleReconcile)
     urlChange(scheduleReconcile, { signal: abortController.signal })
     videoChange(
-      () => {
-        splitState = { ratio: CONFIG.defaultLeftRatio }
+      ({ aid, cid }) => {
+        const nextVideoId = `${aid}:${cid}`
+        if (currentVideoId !== null && currentVideoId !== nextVideoId) {
+          splitState = { ratio: CONFIG.defaultLeftRatio }
+          stopSession()
+        }
+        currentVideoId = nextVideoId
         scheduleReconcile()
       },
       { signal: abortController.signal },
     ).catch(error => {
       console.warn('[videoSplitView] video observer failed', error)
     })
-    reconcile(activeRunId).catch(error => {
+    const generation = ++reconcileGeneration
+    reconcile(activeRunId, generation, currentVideoId).catch(error => {
       console.warn('[videoSplitView] initial reconcile failed', error)
     })
   }
