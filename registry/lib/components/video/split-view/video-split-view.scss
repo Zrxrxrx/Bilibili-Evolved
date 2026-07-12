@@ -8,6 +8,7 @@ html.bsv-active body {
 #bsv-shell {
   --bsv-left-width: 64%;
   --bsv-top-offset: 0px;
+  --bsv-header-gap: 8px;
   --bsv-canvas: #f6f7f8;
   --bsv-surface: var(--be-color-panel-bg, #fff);
   --bsv-border: var(--be-color-panel-border, #e3e5e7);
@@ -19,7 +20,7 @@ html.bsv-active body {
   --bsv-accent: var(--be-color-accent, #00aeec);
   --bsv-shadow: rgb(0 0 0 / 6%);
   position: fixed;
-  inset: var(--bsv-top-offset) 0 0;
+  inset: calc(var(--bsv-top-offset) + var(--bsv-header-gap)) 0 0;
   z-index: 1000;
   display: flex;
   width: 100vw;
