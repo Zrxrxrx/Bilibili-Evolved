@@ -12,7 +12,7 @@ export const CONFIG = Object.freeze({
 
 export const SELECTORS = Object.freeze({
   header: ['#biliMainHeader', '.bili-header', '.mini-header'],
-  pageRoot: ['.bsv-page-root', '#app .video-page-v1', '#app main', '#app'],
+  pageRoot: ['.bsv-page-root', '#app .video-page-v1', '#app'],
   player: ['#bilibili-player', '.bpx-player-container', '.video-container-v1'],
   comments: ['#commentapp', '#comment', '.comment-container'],
   author: ['.up-panel-container'],
@@ -22,7 +22,6 @@ export const SELECTORS = Object.freeze({
 export const MANAGED_PAGE_ROOT_SELECTORS = Object.freeze([
   '.bsv-page-root',
   '.video-page-v1',
-  'main',
   '#app',
 ])
 
@@ -90,9 +89,6 @@ export const videoIdentity = (href: string) => {
   }
 }
 
-export const isPlayerReady = (player: Element | null | undefined) =>
-  Boolean(player && dq(player, 'video'))
-
 export const queryUniqueResult = (
   scope: QueryScope | null | undefined,
   candidates: readonly string[],
@@ -139,9 +135,7 @@ export const directChildContaining = (slot: Element | null, node: Element | null
 }
 
 export const isPageLayoutBranch = (branch: Element | null) =>
-  Boolean(
-    branch?.matches('.video-main, .left-container, .right-container, .video-page-v1, main, #app'),
-  )
+  Boolean(branch?.matches('.video-main, .left-container, .right-container, .video-page-v1, #app'))
 
 export const matchesSourceFingerprint = (candidate: Element | null, source: Element | null) => {
   if (!candidate || !source || candidate.tagName !== source.tagName) {
