@@ -15,7 +15,7 @@ import {
   SELECTORS,
   videoIdentity,
 } from './dom'
-import { observePlayerMode, observePlayerSize, waitForSplitViewPlayer } from './player'
+import { observeElementSize, observePlayerMode, waitForSplitViewPlayer } from './player'
 import { createSplitViewShell } from './shell'
 
 interface SessionNodes {
@@ -76,12 +76,16 @@ const createLayoutSession = (
   const rootHadActive = document.documentElement.classList.contains('bsv-active')
   const pageHadClass = pageRoot.classList.contains('bsv-page-root')
   const headerHadHidden = header?.classList.contains('bsv-hidden') ?? false
+  const fixedHeader =
+    (header && (dq(header, '.bili-header__bar.mini-header, .mini-header') as HTMLElement | null)) ||
+    header
   let currentAuthor = author
   let currentComments = comments
   let stopped = false
   let nativeFullscreen = Boolean(document.fullscreenElement)
   let resizeFrame = 0
   let divider: DividerController | null = null
+  let stopHeaderSizeObserver = lodash.noop
   let stopModeObserver = lodash.noop
   let stopSizeObserver = lodash.noop
 
@@ -119,11 +123,17 @@ const createLayoutSession = (
     shell.shell.style.setProperty('--bsv-player-height', `${Math.min(naturalHeight, maxHeight)}px`)
   }
 
+  const syncHeaderOffset = () => {
+    const headerBottom = fixedHeader?.getBoundingClientRect().bottom ?? 0
+    shell.shell.style.setProperty('--bsv-top-offset', `${Math.max(0, headerBottom)}px`)
+  }
+
   const notifyResize = () => {
     if (stopped || nativeFullscreen || resizeFrame !== 0) {
       return
     }
     resizeFrame = requestAnimationFrame(() => {
+      syncHeaderOffset()
       syncPlayerSize()
       window.dispatchEvent(new Event('resize'))
       resizeFrame = 0
@@ -202,6 +212,7 @@ const createLayoutSession = (
       resizeFrame = 0
     }
     divider?.stop()
+    stopHeaderSizeObserver()
     stopSizeObserver()
     stopModeObserver()
     const replacementPageRootExists = hasReplacementPageRoot()
@@ -263,12 +274,7 @@ const createLayoutSession = (
   }
 
   try {
-    const fixedHeader =
-      (header &&
-        (dq(header, '.bili-header__bar.mini-header, .mini-header') as HTMLElement | null)) ||
-      header
-    const headerBottom = fixedHeader?.getBoundingClientRect().bottom ?? 0
-    shell.shell.style.setProperty('--bsv-top-offset', `${Math.max(0, headerBottom)}px`)
+    syncHeaderOffset()
     document.documentElement.classList.add('bsv-active')
     pageRoot.classList.add('bsv-page-root')
     shell.leftScroll.append(pageRoot)
@@ -291,7 +297,10 @@ const createLayoutSession = (
       splitState,
       () => nativeFullscreen,
     )
-    stopSizeObserver = observePlayerSize(shell.playerSlot, notifyResize)
+    if (fixedHeader) {
+      stopHeaderSizeObserver = observeElementSize(fixedHeader, notifyResize)
+    }
+    stopSizeObserver = observeElementSize(shell.playerSlot, notifyResize)
     stopModeObserver = observePlayerMode(setPlayerMode, sessionAbortController.signal)
     const onFullscreenChange = () => {
       nativeFullscreen = Boolean(document.fullscreenElement)

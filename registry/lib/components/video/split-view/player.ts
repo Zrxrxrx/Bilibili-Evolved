@@ -40,7 +40,7 @@ export const observePlayerMode = (callback: (mode: PlayerMode) => void, signal?:
   return () => window.removeEventListener('playerModeChange', handler as EventListener)
 }
 
-export const observePlayerSize = (target: Element, callback: () => void) => {
+export const observeElementSize = (target: Element, callback: () => void) => {
   const [observer] = sizeChange(target, callback)
   return () => observer.disconnect()
 }
