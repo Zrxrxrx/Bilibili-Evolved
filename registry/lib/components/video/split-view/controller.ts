@@ -1,5 +1,5 @@
 import { childListSubtree, urlChange, videoChange } from '@/core/observer'
-import { createDividerController, SplitState } from './divider'
+import { createDividerController, DividerController, SplitState } from './divider'
 import {
   observePlayerMode,
   observePlayerSize,
@@ -115,11 +115,15 @@ const createLayoutSession = (
   let commentsPlacement = comments ? capturePlacement(comments) : null
   const emptySources = new Set<HTMLElement>()
   const shell = createSplitViewShell()
+  const sessionAbortController = new AbortController()
   let currentAuthor = author
   let currentComments = comments
   let stopped = false
   let nativeFullscreen = Boolean(document.fullscreenElement)
   let resizeFrame = 0
+  let divider: DividerController | null = null
+  let stopModeObserver = lodash.noop
+  let stopSizeObserver = lodash.noop
 
   const markEmpty = (element: HTMLElement | null) => {
     if (element && element.childElementCount === 0) {
@@ -206,58 +210,17 @@ const createLayoutSession = (
     }
   }
 
-  const fixedHeader =
-    (header && (dq(header, '.bili-header__bar.mini-header, .mini-header') as HTMLElement | null)) ||
-    header
-  const headerBottom = fixedHeader?.getBoundingClientRect().bottom ?? 0
-  shell.shell.style.setProperty('--bsv-top-offset', `${Math.max(0, headerBottom)}px`)
-  document.documentElement.classList.add('bsv-active')
-  pageRoot.classList.add('bsv-page-root')
-  shell.leftScroll.append(pageRoot)
-  shell.playerSlot.append(player)
-  markEmpty(playerPlacement.parent as HTMLElement)
-  if (author) {
-    shell.authorCard.replaceChildren(author)
-    markEmpty(authorPlacement?.parent as HTMLElement)
-  }
-  if (comments) {
-    shell.commentsScroll.replaceChildren(comments)
-    markEmpty(commentsPlacement?.parent as HTMLElement)
-  }
-
-  const divider = createDividerController(
-    window,
-    shell.shell,
-    shell.divider,
-    notifyResize,
-    splitState,
-    () => nativeFullscreen,
-  )
-  const stopSizeObserver = observePlayerSize(shell.playerSlot, notifyResize)
-  const stopModeObserver = observePlayerMode(setPlayerMode, signal)
-  const onFullscreenChange = () => {
-    nativeFullscreen = Boolean(document.fullscreenElement)
-    if (nativeFullscreen) {
-      divider.cancelDrag()
-    } else {
-      notifyResize()
-    }
-  }
-  document.addEventListener('fullscreenchange', onFullscreenChange, { signal })
-  media.addEventListener('loadedmetadata', notifyResize, { signal })
-  media.addEventListener('resize', notifyResize, { signal })
-  notifyResize()
-
   const stop = () => {
     if (stopped) {
       return
     }
     stopped = true
+    sessionAbortController.abort()
     if (resizeFrame !== 0) {
       cancelAnimationFrame(resizeFrame)
       resizeFrame = 0
     }
-    divider.stop()
+    divider?.stop()
     stopSizeObserver()
     stopModeObserver()
     header?.classList.remove('bsv-hidden')
@@ -269,6 +232,59 @@ const createLayoutSession = (
     pageRoot.classList.remove('bsv-page-root')
     document.documentElement.classList.remove('bsv-active', 'bsv-dragging')
     shell.shell.remove()
+  }
+
+  try {
+    const fixedHeader =
+      (header &&
+        (dq(header, '.bili-header__bar.mini-header, .mini-header') as HTMLElement | null)) ||
+      header
+    const headerBottom = fixedHeader?.getBoundingClientRect().bottom ?? 0
+    shell.shell.style.setProperty('--bsv-top-offset', `${Math.max(0, headerBottom)}px`)
+    document.documentElement.classList.add('bsv-active')
+    pageRoot.classList.add('bsv-page-root')
+    shell.leftScroll.append(pageRoot)
+    shell.playerSlot.append(player)
+    markEmpty(playerPlacement.parent as HTMLElement)
+    if (author) {
+      shell.authorCard.replaceChildren(author)
+      markEmpty(authorPlacement?.parent as HTMLElement)
+    }
+    if (comments) {
+      shell.commentsScroll.replaceChildren(comments)
+      markEmpty(commentsPlacement?.parent as HTMLElement)
+    }
+
+    divider = createDividerController(
+      window,
+      shell.shell,
+      shell.divider,
+      notifyResize,
+      splitState,
+      () => nativeFullscreen,
+    )
+    stopSizeObserver = observePlayerSize(shell.playerSlot, notifyResize)
+    stopModeObserver = observePlayerMode(setPlayerMode, sessionAbortController.signal)
+    const onFullscreenChange = () => {
+      nativeFullscreen = Boolean(document.fullscreenElement)
+      if (nativeFullscreen) {
+        divider?.cancelDrag()
+      } else {
+        notifyResize()
+      }
+    }
+    document.addEventListener('fullscreenchange', onFullscreenChange, {
+      signal: sessionAbortController.signal,
+    })
+    media.addEventListener('loadedmetadata', notifyResize, {
+      signal: sessionAbortController.signal,
+    })
+    media.addEventListener('resize', notifyResize, { signal: sessionAbortController.signal })
+    signal.addEventListener('abort', stop, { once: true })
+    notifyResize()
+  } catch (error) {
+    stop()
+    throw error
   }
 
   return {
