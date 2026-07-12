@@ -70,7 +70,7 @@ const createLayoutSession = (
   const { auxiliary, author, comments, header, media, pageRoot, player } = nodes
   const pagePlacement = capturePlacement(pageRoot)
   const playerPlacement = capturePlacement(player)
-  const auxiliaryPlacement: Placement<HTMLElement> | null = auxiliary
+  let auxiliaryPlacement: Placement<HTMLElement> | null = auxiliary
     ? capturePlacement(auxiliary)
     : null
   let authorPlacement: Placement<HTMLElement> | null = author ? capturePlacement(author) : null
@@ -88,7 +88,7 @@ const createLayoutSession = (
     header
   let currentAuthor = author
   let currentComments = comments
-  const currentAuxiliary = auxiliary
+  let currentAuxiliary = auxiliary
   let stopped = false
   let nativeFullscreen = Boolean(document.fullscreenElement)
   let resizeFrame = 0
@@ -194,9 +194,21 @@ const createLayoutSession = (
     markEmpty(commentsPlacement.parent as HTMLElement)
   }
 
+  const attachAuxiliary = (node: HTMLElement) => {
+    if (currentAuxiliary && shell.auxiliaryScroll.contains(currentAuxiliary)) {
+      return
+    }
+    auxiliaryPlacement = capturePlacement(node)
+    currentAuxiliary = node
+    shell.auxiliaryScroll.replaceChildren(node)
+    markEmpty(auxiliaryPlacement.parent as HTMLElement)
+  }
+
   const attachDelayedNodes = () => {
     if (!currentAuthor?.isConnected) {
-      const nextAuthor = queryUnique(pageRoot, SELECTORS.author)
+      const nextAuthor =
+        queryUnique(shell.auxiliaryScroll, SELECTORS.author) ||
+        queryUnique(pageRoot, SELECTORS.author)
       if (nextAuthor instanceof HTMLElement) {
         attachAuthor(nextAuthor)
       }
@@ -205,6 +217,12 @@ const createLayoutSession = (
       const nextComments = queryUnique(pageRoot, SELECTORS.comments)
       if (nextComments instanceof HTMLElement) {
         attachComments(nextComments)
+      }
+    }
+    if (!currentAuxiliary || !shell.auxiliaryScroll.contains(currentAuxiliary)) {
+      const nextAuxiliary = queryUnique(pageRoot, SELECTORS.auxiliary)
+      if (nextAuxiliary instanceof HTMLElement) {
+        attachAuxiliary(nextAuxiliary)
       }
     }
   }
