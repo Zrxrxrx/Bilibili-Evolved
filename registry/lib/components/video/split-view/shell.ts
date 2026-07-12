@@ -1,4 +1,6 @@
 export interface SplitViewShell {
+  auxiliaryScroll: HTMLElement
+  auxiliaryWaiting: HTMLElement
   authorCard: HTMLElement
   commentsScroll: HTMLElement
   commentsWaiting: HTMLElement
@@ -7,8 +9,11 @@ export interface SplitViewShell {
   leftScroll: HTMLElement
   playerSlot: HTMLElement
   rightPane: HTMLElement
+  setActiveTab: (tab: RightPaneTab) => void
   shell: HTMLElement
 }
+
+export type RightPaneTab = 'comments' | 'auxiliary'
 
 const getRequiredElement = (root: ParentNode, selector: string) => {
   const element = root.querySelector(selector)
@@ -29,20 +34,47 @@ export const createSplitViewShell = (): SplitViewShell => {
     <div id="bsv-divider" role="separator" aria-orientation="vertical"></div>
     <aside id="bsv-right-pane">
       <section id="bsv-author-card"></section>
-      <div id="bsv-comments-scroll">
-        <div id="bsv-comments-waiting">正在等待评论区</div>
-      </div>
+      <section id="bsv-content-card">
+        <div id="bsv-tabs" role="tablist" aria-label="侧栏内容">
+          <button id="bsv-comments-tab" class="bsv-tab bsv-active" type="button" role="tab" aria-selected="true" aria-controls="bsv-comments-scroll">评论</button>
+          <button id="bsv-auxiliary-tab" class="bsv-tab" type="button" role="tab" aria-selected="false" aria-controls="bsv-auxiliary-scroll">弹幕与推荐</button>
+        </div>
+        <div id="bsv-comments-scroll" class="bsv-tab-panel" role="tabpanel" aria-labelledby="bsv-comments-tab">
+          <div id="bsv-comments-waiting">正在等待评论区</div>
+        </div>
+        <div id="bsv-auxiliary-scroll" class="bsv-tab-panel" role="tabpanel" aria-labelledby="bsv-auxiliary-tab" hidden>
+          <div id="bsv-auxiliary-waiting">正在等待弹幕与推荐</div>
+        </div>
+      </section>
     </aside>
   `
+  const auxiliaryScroll = getRequiredElement(shell, '#bsv-auxiliary-scroll')
+  const commentsScroll = getRequiredElement(shell, '#bsv-comments-scroll')
+  const auxiliaryTab = getRequiredElement(shell, '#bsv-auxiliary-tab')
+  const commentsTab = getRequiredElement(shell, '#bsv-comments-tab')
+  const setActiveTab = (tab: RightPaneTab) => {
+    const commentsActive = tab === 'comments'
+    commentsTab.classList.toggle('bsv-active', commentsActive)
+    commentsTab.setAttribute('aria-selected', String(commentsActive))
+    auxiliaryTab.classList.toggle('bsv-active', !commentsActive)
+    auxiliaryTab.setAttribute('aria-selected', String(!commentsActive))
+    commentsScroll.hidden = !commentsActive
+    auxiliaryScroll.hidden = commentsActive
+  }
+  commentsTab.addEventListener('click', () => setActiveTab('comments'))
+  auxiliaryTab.addEventListener('click', () => setActiveTab('auxiliary'))
   const parts = {
+    auxiliaryScroll,
+    auxiliaryWaiting: getRequiredElement(shell, '#bsv-auxiliary-waiting'),
     authorCard: getRequiredElement(shell, '#bsv-author-card'),
-    commentsScroll: getRequiredElement(shell, '#bsv-comments-scroll'),
+    commentsScroll,
     commentsWaiting: getRequiredElement(shell, '#bsv-comments-waiting'),
     divider: getRequiredElement(shell, '#bsv-divider'),
     leftPane: getRequiredElement(shell, '#bsv-left-pane'),
     leftScroll: getRequiredElement(shell, '#bsv-left-scroll'),
     playerSlot: getRequiredElement(shell, '#bsv-player-slot'),
     rightPane: getRequiredElement(shell, '#bsv-right-pane'),
+    setActiveTab,
     shell,
   }
   parts.commentsScroll.replaceChildren(parts.commentsWaiting)
