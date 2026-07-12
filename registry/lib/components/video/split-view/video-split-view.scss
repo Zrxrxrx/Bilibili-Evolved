@@ -195,6 +195,11 @@ html.bsv-dragging * {
   padding: 0 !important;
 }
 
+#bsv-left-scroll #biliMainHeader .bili-header__bar.mini-header {
+  right: 0 !important;
+  left: 0 !important;
+}
+
 #bsv-shell .bsv-source-empty {
   display: none !important;
 }
