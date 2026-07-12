@@ -61,6 +61,10 @@ const resolveSessionNodes = async (signal: AbortSignal): Promise<SessionNodes | 
   }
 }
 
+const resolveFixedHeader = (header: HTMLElement | null) =>
+  (header && (dq(header, '.bili-header__bar.mini-header, .mini-header') as HTMLElement | null)) ||
+  header
+
 const createLayoutSession = (
   nodes: SessionNodes,
   splitState: SplitState,
@@ -82,15 +86,15 @@ const createLayoutSession = (
   const sessionAbortController = new AbortController()
   const rootHadActive = document.documentElement.classList.contains('bsv-active')
   const pageHadClass = pageRoot.classList.contains('bsv-page-root')
-  const headerHadHidden = header?.classList.contains('bsv-hidden') ?? false
-  const fixedHeader =
-    (header && (dq(header, '.bili-header__bar.mini-header, .mini-header') as HTMLElement | null)) ||
-    header
+  let currentHeader = header
+  let fixedHeader = resolveFixedHeader(header)
+  let headerHadHidden = header?.classList.contains('bsv-hidden') ?? false
   let currentAuthor = author
   let currentComments = comments
   let currentAuxiliary = auxiliary
   let stopped = false
   let nativeFullscreen = Boolean(document.fullscreenElement)
+  let webFullscreen = false
   let resizeFrame = 0
   let divider: DividerController | null = null
   let stopHeaderSizeObserver = lodash.noop
@@ -132,7 +136,10 @@ const createLayoutSession = (
   }
 
   const syncHeaderOffset = () => {
-    const headerBottom = fixedHeader?.getBoundingClientRect().bottom ?? 0
+    const activeFixedHeader = fixedHeader?.isConnected
+      ? fixedHeader
+      : resolveFixedHeader(queryUnique(document, SELECTORS.header) as HTMLElement | null)
+    const headerBottom = activeFixedHeader?.getBoundingClientRect().bottom ?? 0
     shell.shell.style.setProperty('--bsv-top-offset', `${Math.max(0, headerBottom)}px`)
   }
 
@@ -149,14 +156,36 @@ const createLayoutSession = (
   }
 
   const setPlayerMode = (mode: PlayerMode) => {
-    const webFullscreen = mode === 'web'
+    webFullscreen = mode === 'web'
     const wideScreen = mode === 'wide'
     nativeFullscreen = mode === 'full' || Boolean(document.fullscreenElement)
     shell.shell.classList.toggle('bsv-player-expanded', webFullscreen)
     shell.shell.classList.toggle('bsv-player-wide', wideScreen)
-    if (header && !headerHadHidden) {
-      header.classList.toggle('bsv-hidden', webFullscreen)
+    if (currentHeader && !headerHadHidden) {
+      currentHeader.classList.toggle('bsv-hidden', webFullscreen)
     }
+    notifyResize()
+  }
+
+  const updateHeaderTarget = () => {
+    const nextHeader = queryUnique(document, SELECTORS.header) as HTMLElement | null
+    const nextFixedHeader = resolveFixedHeader(nextHeader)
+    if (nextHeader === currentHeader && nextFixedHeader === fixedHeader) {
+      return
+    }
+    if (currentHeader && !headerHadHidden) {
+      currentHeader.classList.remove('bsv-hidden')
+    }
+    stopHeaderSizeObserver()
+    currentHeader = nextHeader
+    fixedHeader = nextFixedHeader
+    headerHadHidden = currentHeader?.classList.contains('bsv-hidden') ?? false
+    if (currentHeader && !headerHadHidden) {
+      currentHeader.classList.toggle('bsv-hidden', webFullscreen)
+    }
+    stopHeaderSizeObserver = fixedHeader
+      ? observeElementSize(fixedHeader, notifyResize)
+      : lodash.noop
     notifyResize()
   }
 
@@ -205,6 +234,7 @@ const createLayoutSession = (
   }
 
   const attachDelayedNodes = () => {
+    updateHeaderTarget()
     if (!currentAuthor?.isConnected) {
       const nextAuthor =
         queryUnique(shell.auxiliaryScroll, SELECTORS.author) ||
@@ -301,8 +331,8 @@ const createLayoutSession = (
         document.documentElement.classList.remove('bsv-dragging')
       },
       () => {
-        if (header && !headerHadHidden) {
-          header.classList.remove('bsv-hidden')
+        if (currentHeader && !headerHadHidden) {
+          currentHeader.classList.remove('bsv-hidden')
         }
       },
       () => shell.shell.remove(),
