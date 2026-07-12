@@ -1,22 +1,22 @@
 import { childListSubtree, urlChange, videoChange } from '@/core/observer'
 import { createDividerController, DividerController, SplitState } from './divider'
 import {
+  capturePlacement,
+  CONFIG,
+  isSupportedVideoUrl,
+  Placement,
+  queryUnique,
+  resolveNodes,
+  restoreManagedPayload,
+  SELECTORS,
+} from './dom'
+import {
   observePlayerMode,
   observePlayerSize,
   SplitViewPlayerMode,
   waitForSplitViewPlayer,
 } from './player'
 import { createSplitViewShell } from './shell'
-
-const minViewportWidth = 960
-const minLeftScrollHeight = 180
-const reconcileDelay = 50
-
-interface Placement {
-  nextSibling: ChildNode | null
-  node: HTMLElement
-  parent: Node
-}
 
 interface SessionNodes {
   author: HTMLElement | null
@@ -33,73 +33,27 @@ interface LayoutSession {
   stop: () => void
 }
 
-const isSupportedPage = (href = location.href) => {
-  try {
-    const url = new URL(href)
-    return (
-      url.protocol === 'https:' &&
-      url.host === 'www.bilibili.com' &&
-      url.pathname.startsWith('/video/')
-    )
-  } catch {
-    return false
-  }
-}
-
-const queryByPriority = (scope: ParentNode, selectors: string[]) => {
-  for (const selector of selectors) {
-    const matches = Array.from(scope.querySelectorAll(selector)).filter(
-      (node): node is HTMLElement => node instanceof HTMLElement,
-    )
-    if (matches.length === 1) {
-      return matches[0]
-    }
-    if (matches.length > 1) {
-      return null
-    }
-  }
-  return null
-}
-
-const capturePlacement = (node: HTMLElement): Placement => ({
-  nextSibling: node.nextSibling,
-  node,
-  parent: node.parentNode,
-})
-
-const restorePlacement = (placement: Placement | null, fallback: Node) => {
-  if (!placement || !placement.node.isConnected) {
-    return
-  }
-  const parent = placement.parent.isConnected ? placement.parent : fallback
-  const sibling = placement.nextSibling?.parentNode === parent ? placement.nextSibling : null
-  parent.insertBefore(placement.node, sibling)
-}
-
 const resolveSessionNodes = async (signal: AbortSignal): Promise<SessionNodes | null> => {
   const resolvedPlayer = await waitForSplitViewPlayer(signal)
   if (!resolvedPlayer || signal.aborted) {
     return null
   }
-  const { container, media } = resolvedPlayer
-  const player = container.closest('.video-container-v1') || container
-  if (!(player instanceof HTMLElement)) {
-    return null
-  }
-  const pageRoot =
-    player.closest('.video-page-v1') ||
-    player.closest('main') ||
-    (dq('#app .video-page-v1, #app main, #app') as HTMLElement | null)
-  if (!(pageRoot instanceof HTMLElement)) {
+  const resolvedNodes = resolveNodes(document)
+  if (
+    !resolvedNodes ||
+    !(resolvedNodes.pageRoot instanceof HTMLElement) ||
+    !(resolvedNodes.player instanceof HTMLElement) ||
+    !resolvedNodes.player.contains(resolvedPlayer.container)
+  ) {
     return null
   }
   return {
-    author: queryByPriority(pageRoot, ['.up-panel-container']),
-    comments: queryByPriority(pageRoot, ['#commentapp', '#comment', '.comment-container']),
-    header: queryByPriority(document, ['#biliMainHeader', '.bili-header', '.mini-header']),
-    media,
-    pageRoot,
-    player,
+    author: resolvedNodes.author instanceof HTMLElement ? resolvedNodes.author : null,
+    comments: resolvedNodes.comments instanceof HTMLElement ? resolvedNodes.comments : null,
+    header: resolvedNodes.header instanceof HTMLElement ? resolvedNodes.header : null,
+    media: resolvedPlayer.media,
+    pageRoot: resolvedNodes.pageRoot,
+    player: resolvedNodes.player,
   }
 }
 
@@ -111,8 +65,10 @@ const createLayoutSession = (
   const { author, comments, header, media, pageRoot, player } = nodes
   const pagePlacement = capturePlacement(pageRoot)
   const playerPlacement = capturePlacement(player)
-  let authorPlacement = author ? capturePlacement(author) : null
-  let commentsPlacement = comments ? capturePlacement(comments) : null
+  let authorPlacement: Placement<HTMLElement> | null = author ? capturePlacement(author) : null
+  let commentsPlacement: Placement<HTMLElement> | null = comments
+    ? capturePlacement(comments)
+    : null
   const emptySources = new Set<HTMLElement>()
   const shell = createSplitViewShell()
   const sessionAbortController = new AbortController()
@@ -145,7 +101,9 @@ const createLayoutSession = (
     const naturalHeight = width / ratio + sendingBarHeight
     const paneHeight = shell.leftPane.getBoundingClientRect().height
     const maxHeight =
-      paneHeight > 0 ? Math.max(sendingBarHeight, paneHeight - minLeftScrollHeight) : naturalHeight
+      paneHeight > 0
+        ? Math.max(sendingBarHeight, paneHeight - CONFIG.minLeftScrollHeight)
+        : naturalHeight
     shell.shell.style.setProperty('--bsv-player-height', `${Math.min(naturalHeight, maxHeight)}px`)
   }
 
@@ -193,18 +151,14 @@ const createLayoutSession = (
 
   const attachDelayedNodes = () => {
     if (!currentAuthor?.isConnected) {
-      const nextAuthor = queryByPriority(pageRoot, ['.up-panel-container'])
-      if (nextAuthor) {
+      const nextAuthor = queryUnique(pageRoot, SELECTORS.author)
+      if (nextAuthor instanceof HTMLElement) {
         attachAuthor(nextAuthor)
       }
     }
     if (!currentComments?.isConnected) {
-      const nextComments = queryByPriority(pageRoot, [
-        '#commentapp',
-        '#comment',
-        '.comment-container',
-      ])
-      if (nextComments) {
+      const nextComments = queryUnique(pageRoot, SELECTORS.comments)
+      if (nextComments instanceof HTMLElement) {
         attachComments(nextComments)
       }
     }
@@ -224,10 +178,22 @@ const createLayoutSession = (
     stopSizeObserver()
     stopModeObserver()
     header?.classList.remove('bsv-hidden')
-    restorePlacement(authorPlacement, pageRoot)
-    restorePlacement(commentsPlacement, pageRoot)
-    restorePlacement(playerPlacement, pageRoot)
-    restorePlacement(pagePlacement, document.body)
+    restoreManagedPayload(
+      authorPlacement,
+      [authorPlacement?.node],
+      authorPlacement?.node ?? null,
+      true,
+      pageRoot,
+    )
+    restoreManagedPayload(
+      commentsPlacement,
+      [commentsPlacement?.node],
+      commentsPlacement?.node ?? null,
+      true,
+      pageRoot,
+    )
+    restoreManagedPayload(playerPlacement, [player], player, true, pageRoot)
+    restoreManagedPayload(pagePlacement, [pageRoot], pageRoot, true, document.body)
     emptySources.forEach(element => element.classList.remove('bsv-source-empty'))
     pageRoot.classList.remove('bsv-page-root')
     document.documentElement.classList.remove('bsv-active', 'bsv-dragging')
@@ -309,7 +275,7 @@ export const createSplitViewController = (): SplitViewController => {
   let runId = 0
   let session: LayoutSession | null = null
   let mediaQuery: MediaQueryList | null = null
-  let splitState: SplitState = { ratio: 0.64 }
+  let splitState: SplitState = { ratio: CONFIG.defaultLeftRatio }
 
   const stopSession = () => {
     session?.stop()
@@ -320,7 +286,7 @@ export const createSplitViewController = (): SplitViewController => {
     if (activeRunId !== runId || abortController?.signal.aborted) {
       return
     }
-    if (!isSupportedPage() || !mediaQuery?.matches) {
+    if (!isSupportedVideoUrl(location.href) || !mediaQuery?.matches) {
       stopSession()
       return
     }
@@ -343,7 +309,7 @@ export const createSplitViewController = (): SplitViewController => {
       reconcile(activeRunId).catch(error => {
         console.warn('[videoSplitView] reconcile failed', error)
       })
-    }, reconcileDelay)
+    }, CONFIG.reconcileDelayMs)
   }
 
   const stop = () => {
@@ -362,13 +328,13 @@ export const createSplitViewController = (): SplitViewController => {
     stop()
     const activeRunId = ++runId
     abortController = new AbortController()
-    mediaQuery = matchMedia(`(min-width: ${minViewportWidth}px)`)
+    mediaQuery = matchMedia(`(min-width: ${CONFIG.minViewportWidth}px)`)
     mediaQuery.addEventListener('change', scheduleReconcile, { signal: abortController.signal })
     ;[documentObserver] = childListSubtree(document, scheduleReconcile)
     urlChange(scheduleReconcile, { signal: abortController.signal })
     videoChange(
       () => {
-        splitState = { ratio: 0.64 }
+        splitState = { ratio: CONFIG.defaultLeftRatio }
         scheduleReconcile()
       },
       { signal: abortController.signal },
