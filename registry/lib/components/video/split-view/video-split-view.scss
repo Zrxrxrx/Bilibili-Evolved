@@ -244,7 +244,8 @@ html.bsv-dragging * {
   display: none !important;
 }
 
-body.dark #bsv-shell {
+body.dark #bsv-shell,
+html.night-mode #bsv-shell {
   --bsv-canvas: var(--be-color-panel-bg, #0f1012);
   --bsv-surface: var(--be-color-card-bg, #18191c);
   --bsv-border: var(--be-color-card-border, #34373b);
@@ -257,19 +258,37 @@ body.dark #bsv-shell {
   color-scheme: dark;
 }
 
+html.night-mode #bsv-shell {
+  --bsv-canvas: var(--bg3, #0a0b0c);
+  --bsv-surface: var(--bg1, #17181a);
+  --bsv-border: var(--line_regular, #2f3134);
+  --bsv-divider: var(--graph_bg_regular, #232527);
+  --bsv-divider-border: var(--line_regular, #2f3134);
+  --bsv-divider-hover: var(--graph_bg_thin, #1e2022);
+  --bsv-text: var(--text1, #e7e9eb);
+  --bsv-muted: var(--text3, #757a81);
+}
+
 body.dark #bsv-left-pane .bpx-player-sending-bar,
-body.dark #bsv-left-scroll .bpx-docker {
+body.dark #bsv-left-scroll .bpx-docker,
+html.night-mode #bsv-left-pane .bpx-player-sending-bar,
+html.night-mode #bsv-left-scroll .bpx-docker {
   background: var(--bsv-surface) !important;
 }
 
 body.dark #bsv-left-pane .bpx-player-video-inputbar,
 body.dark #bsv-left-scroll .tag-link,
 body.dark #bsv-left-scroll .danmaku-wrap,
-body.dark #bsv-left-scroll .bui-collapse-header {
-  color: var(--be-color-text-content, #c9ccd0) !important;
-  background: var(--be-color-button-bg, #2f3237) !important;
+body.dark #bsv-left-scroll .bui-collapse-header,
+html.night-mode #bsv-left-pane .bpx-player-video-inputbar,
+html.night-mode #bsv-left-scroll .tag-link,
+html.night-mode #bsv-left-scroll .danmaku-wrap,
+html.night-mode #bsv-left-scroll .bui-collapse-header {
+  color: var(--bsv-text) !important;
+  background: var(--bsv-divider) !important;
 }
 
-body.dark #bsv-left-pane .bpx-player-dm-input {
-  color: var(--be-color-text-content, #c9ccd0) !important;
+body.dark #bsv-left-pane .bpx-player-dm-input,
+html.night-mode #bsv-left-pane .bpx-player-dm-input {
+  color: var(--bsv-text) !important;
 }
