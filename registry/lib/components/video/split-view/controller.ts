@@ -101,10 +101,12 @@ const createLayoutSession = (
     if (!media.isConnected || width <= 0) {
       return
     }
-    const ratio =
-      media instanceof HTMLVideoElement && media.videoWidth > 0 && media.videoHeight > 0
-        ? media.videoWidth / media.videoHeight
-        : 16 / 9
+    const mediaWithDimensions = media as HTMLElement & {
+      videoHeight?: number
+      videoWidth?: number
+    }
+    const { videoHeight = 0, videoWidth = 0 } = mediaWithDimensions
+    const ratio = videoWidth > 0 && videoHeight > 0 ? videoWidth / videoHeight : 16 / 9
     const sendingBarHeight =
       (dq(player, '.bpx-player-sending-bar') as HTMLElement | null)?.getBoundingClientRect()
         .height ?? 0
