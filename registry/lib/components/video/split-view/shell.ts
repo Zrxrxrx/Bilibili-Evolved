@@ -52,7 +52,15 @@ export const createSplitViewShell = (): SplitViewShell => {
   const commentsScroll = getRequiredElement(shell, '#bsv-comments-scroll')
   const auxiliaryTab = getRequiredElement(shell, '#bsv-auxiliary-tab')
   const commentsTab = getRequiredElement(shell, '#bsv-comments-tab')
+  const scrollPositions: Record<RightPaneTab, number> = { auxiliary: 0, comments: 0 }
+  let activeTab: RightPaneTab = 'comments'
   const setActiveTab = (tab: RightPaneTab) => {
+    if (tab === activeTab) {
+      return
+    }
+    const activePanel = activeTab === 'comments' ? commentsScroll : auxiliaryScroll
+    const nextPanel = tab === 'comments' ? commentsScroll : auxiliaryScroll
+    scrollPositions[activeTab] = activePanel.scrollTop
     const commentsActive = tab === 'comments'
     commentsTab.classList.toggle('bsv-active', commentsActive)
     commentsTab.setAttribute('aria-selected', String(commentsActive))
@@ -60,6 +68,8 @@ export const createSplitViewShell = (): SplitViewShell => {
     auxiliaryTab.setAttribute('aria-selected', String(!commentsActive))
     commentsScroll.hidden = !commentsActive
     auxiliaryScroll.hidden = commentsActive
+    nextPanel.scrollTop = scrollPositions[tab]
+    activeTab = tab
   }
   commentsTab.addEventListener('click', () => setActiveTab('comments'))
   auxiliaryTab.addEventListener('click', () => setActiveTab('auxiliary'))
