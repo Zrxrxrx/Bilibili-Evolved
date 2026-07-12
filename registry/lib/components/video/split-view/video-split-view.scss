@@ -175,6 +175,23 @@ html.bsv-active body {
   display: none !important;
 }
 
+#bsv-auxiliary-scroll {
+  padding: 0 !important;
+}
+
+#bsv-auxiliary-scroll > .right-container,
+#bsv-auxiliary-scroll > .right-container > .right-container-inner {
+  box-sizing: border-box !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  margin: 0 !important;
+}
+
+#bsv-auxiliary-scroll > .right-container > .right-container-inner {
+  position: static !important;
+}
+
 #bsv-divider {
   position: relative;
   box-sizing: border-box;

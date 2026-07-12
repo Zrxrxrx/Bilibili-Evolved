@@ -15,6 +15,7 @@ export const SELECTORS = Object.freeze({
   player: ['#bilibili-player', '.bpx-player-container', '.video-container-v1'],
   comments: ['#commentapp', '#comment', '.comment-container'],
   author: ['.up-panel-container'],
+  auxiliary: ['.right-container'],
   commentAnchor: ['#commentapp', '#comment', '[data-module="comment"]'],
 })
 
@@ -40,6 +41,7 @@ export interface Placement<T extends Element = Element> {
 }
 
 export interface ManagedNodesHint {
+  auxiliary?: Element | null
   author?: Element | null
   comments?: Element | null
   commentsSource?: Element | null
@@ -52,6 +54,7 @@ export interface ManagedNodesHint {
 }
 
 export interface ResolvedNodes {
+  auxiliary: Element | null
   pageRoot: Element
   player: Element
   comments: Element | null
@@ -458,11 +461,13 @@ export const resolveNodes = (
   let player: Element | null = null
   let comments: Element | null = null
   let author: Element | null = null
+  let auxiliary: Element | null = null
 
   if (activeShell) {
     const playerSlot = queryUnique(activeShell, ['#bsv-player-slot'])
     const commentsScroll = queryUnique(activeShell, ['#bsv-comments-scroll'])
     const authorCard = queryUnique(activeShell, ['#bsv-author-card'])
+    const auxiliaryScroll = queryUnique(activeShell, ['#bsv-auxiliary-scroll'])
     pageRoot = resolveActivePageRoot(activeShell, currentNodes?.pageRoot)
     const pageTreeReplaced = Boolean(
       currentNodes?.pageRoot &&
@@ -501,6 +506,15 @@ export const resolveNodes = (
       if (!managedAuthor.ambiguous) {
         author = managedAuthor.node || queryUnique(pageRoot, SELECTORS.author)
       }
+      const managedAuxiliary = resolveManagedSlotResult(
+        auxiliaryScroll,
+        SELECTORS.auxiliary,
+        currentNodes?.auxiliary ?? null,
+        'bsv-auxiliary-waiting',
+      )
+      if (!managedAuxiliary.ambiguous) {
+        auxiliary = managedAuxiliary.node || queryUnique(pageRoot, SELECTORS.auxiliary)
+      }
     }
   } else {
     const resolvedPageRoot = queryUnique(document, SELECTORS.pageRoot)
@@ -528,12 +542,14 @@ export const resolveNodes = (
       comments = commentsResult.ambiguous ? null : commentsResult.node
     }
     author = queryUnique(pageRoot, SELECTORS.author)
+    auxiliary = queryUnique(pageRoot, SELECTORS.auxiliary)
   }
 
   if (!player || !pageRoot) {
     return null
   }
   return {
+    auxiliary,
     pageRoot,
     player,
     comments,

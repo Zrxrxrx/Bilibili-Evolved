@@ -19,6 +19,7 @@ import { observeElementSize, observePlayerMode, waitForSplitViewPlayer } from '.
 import { createSplitViewShell } from './shell'
 
 interface SessionNodes {
+  auxiliary: HTMLElement | null
   author: HTMLElement | null
   comments: HTMLElement | null
   header: HTMLElement | null
@@ -50,6 +51,7 @@ const resolveSessionNodes = async (signal: AbortSignal): Promise<SessionNodes | 
     return null
   }
   return {
+    auxiliary: resolvedNodes.auxiliary instanceof HTMLElement ? resolvedNodes.auxiliary : null,
     author: resolvedNodes.author instanceof HTMLElement ? resolvedNodes.author : null,
     comments: resolvedNodes.comments instanceof HTMLElement ? resolvedNodes.comments : null,
     header: resolvedNodes.header instanceof HTMLElement ? resolvedNodes.header : null,
@@ -65,9 +67,12 @@ const createLayoutSession = (
   minRightWidth: number,
   signal: AbortSignal,
 ): LayoutSession => {
-  const { author, comments, header, media, pageRoot, player } = nodes
+  const { auxiliary, author, comments, header, media, pageRoot, player } = nodes
   const pagePlacement = capturePlacement(pageRoot)
   const playerPlacement = capturePlacement(player)
+  const auxiliaryPlacement: Placement<HTMLElement> | null = auxiliary
+    ? capturePlacement(auxiliary)
+    : null
   let authorPlacement: Placement<HTMLElement> | null = author ? capturePlacement(author) : null
   let commentsPlacement: Placement<HTMLElement> | null = comments
     ? capturePlacement(comments)
@@ -83,6 +88,7 @@ const createLayoutSession = (
     header
   let currentAuthor = author
   let currentComments = comments
+  const currentAuxiliary = auxiliary
   let stopped = false
   let nativeFullscreen = Boolean(document.fullscreenElement)
   let resizeFrame = 0
@@ -223,6 +229,9 @@ const createLayoutSession = (
     const commentsPayload = [...shell.commentsScroll.children].filter(
       node => node !== shell.commentsWaiting,
     )
+    const auxiliaryPayload = [...shell.auxiliaryScroll.children].filter(
+      node => node !== shell.auxiliaryWaiting,
+    )
     const authorPayload = [...shell.authorCard.children]
     const managedPageRoot = resolveManagedPageRoot(shell.leftScroll, pageRoot)
     const managedPlayer = resolveManagedSlotResult(shell.playerSlot, SELECTORS.player, player).node
@@ -237,11 +246,25 @@ const createLayoutSession = (
       SELECTORS.author,
       currentAuthor,
     ).node
+    const managedAuxiliary = resolveManagedSlotResult(
+      shell.auxiliaryScroll,
+      SELECTORS.auxiliary,
+      currentAuxiliary,
+      'bsv-auxiliary-waiting',
+    ).node
     const cleanupTasks: Array<() => void> = [
       () => shell.commentsWaiting.remove(),
+      () => shell.auxiliaryWaiting.remove(),
       () => {
         if (!replacementPageRootExists) {
           restoreManagedPayload(authorPlacement, authorPayload, managedAuthor, true, pageRoot)
+          restoreManagedPayload(
+            auxiliaryPlacement,
+            auxiliaryPayload,
+            managedAuxiliary,
+            true,
+            pageRoot,
+          )
           restoreManagedPayload(commentsPlacement, commentsPayload, managedComments, true, pageRoot)
           restoreManagedPayload(playerPlacement, playerPayload, managedPlayer, true, pageRoot)
           restoreManagedPayload(pagePlacement, pagePayload, managedPageRoot, true, document.body)
@@ -289,6 +312,10 @@ const createLayoutSession = (
     if (comments) {
       shell.commentsScroll.replaceChildren(comments)
       markEmpty(commentsPlacement?.parent as HTMLElement)
+    }
+    if (auxiliary) {
+      shell.auxiliaryScroll.replaceChildren(auxiliary)
+      markEmpty(auxiliaryPlacement?.parent as HTMLElement)
     }
 
     divider = createDividerController(
