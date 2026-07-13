@@ -12,7 +12,7 @@ export interface DividerController {
 }
 
 const calculateLeftWidth = (shellWidth: number, pointerX: number, minRightWidth: number) => {
-  const ratio = lodash.clamp(pointerX / shellWidth, CONFIG.minLeftRatio, CONFIG.maxLeftRatio)
+  const ratio = lodash.clamp(pointerX / shellWidth, CONFIG.minLeftRatio, 1)
   const ratioWidth = ratio * shellWidth
   const maxByRightPane = shellWidth - minRightWidth - CONFIG.dividerWidth
   return Math.min(maxByRightPane, Math.max(CONFIG.minLeftWidth, ratioWidth))
@@ -40,11 +40,7 @@ export const createDividerController = (
   const applyPointer = (pointerX: number) => {
     const rect = getShellRect()
     const relativeX = pointerX - rect.left
-    splitState.ratio = lodash.clamp(
-      relativeX / rect.width,
-      CONFIG.minLeftRatio,
-      CONFIG.maxLeftRatio,
-    )
+    splitState.ratio = lodash.clamp(relativeX / rect.width, CONFIG.minLeftRatio, 1)
     const leftWidth = calculateLeftWidth(
       rect.width,
       rect.width * splitState.ratio,

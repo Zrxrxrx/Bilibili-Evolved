@@ -2,7 +2,6 @@ export const CONFIG = Object.freeze({
   minViewportWidth: 960,
   defaultLeftRatio: 0.64,
   minLeftRatio: 0.42,
-  maxLeftRatio: 0.72,
   minLeftWidth: 420,
   dividerWidth: 10,
   minLeftScrollHeight: 180,
