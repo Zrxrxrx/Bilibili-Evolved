@@ -7,6 +7,7 @@ export interface SplitState {
 export interface DividerController {
   applyRatio: () => void
   cancelDrag: () => void
+  setRatio: (ratio: number) => void
   setMinRightWidth: (width: number) => void
   stop: () => void
 }
@@ -26,9 +27,12 @@ export const createDividerController = (
   minRightWidth: number,
   splitState: SplitState = { ratio: CONFIG.defaultLeftRatio },
   isSuspended: () => boolean = () => false,
+  onRatioCommitted: (ratio: number) => void = lodash.noop,
 ): DividerController => {
   let activePointerId: number | null = null
   let currentMinRightWidth = minRightWidth
+  let dragChanged = false
+  let lastAppliedRatio = splitState.ratio
   let stopped = false
 
   const getShellRect = () => {
@@ -46,6 +50,8 @@ export const createDividerController = (
       rect.width * splitState.ratio,
       currentMinRightWidth,
     )
+    lastAppliedRatio = leftWidth / rect.width
+    dragChanged = true
     shell.style.setProperty('--bsv-left-width', `${leftWidth}px`)
     notifyResize()
   }
@@ -67,6 +73,7 @@ export const createDividerController = (
   const cancelDrag = () => {
     const pointerId = activePointerId
     activePointerId = null
+    dragChanged = false
     if (pointerId !== null && divider.hasPointerCapture?.(pointerId)) {
       try {
         divider.releasePointerCapture(pointerId)
@@ -89,6 +96,7 @@ export const createDividerController = (
     }
     divider.setPointerCapture?.(event.pointerId)
     activePointerId = event.pointerId
+    dragChanged = false
     window.document.documentElement.classList.add('bsv-dragging')
   }
 
@@ -100,7 +108,12 @@ export const createDividerController = (
 
   const onPointerEnd = (event: PointerEvent) => {
     if (event.pointerId === activePointerId) {
+      const shouldCommit = event.type === 'pointerup' && dragChanged
+      const committedRatio = lastAppliedRatio
       cancelDrag()
+      if (shouldCommit) {
+        onRatioCommitted(committedRatio)
+      }
     }
   }
 
@@ -110,6 +123,11 @@ export const createDividerController = (
 
   const setMinRightWidth = (width: number) => {
     currentMinRightWidth = width
+    applyRatio()
+  }
+
+  const setRatio = (ratio: number) => {
+    splitState.ratio = lodash.clamp(ratio, CONFIG.minLeftRatio, 1)
     applyRatio()
   }
 
@@ -140,5 +158,5 @@ export const createDividerController = (
     throw error
   }
 
-  return { applyRatio, cancelDrag, setMinRightWidth, stop }
+  return { applyRatio, cancelDrag, setRatio, setMinRightWidth, stop }
 }
