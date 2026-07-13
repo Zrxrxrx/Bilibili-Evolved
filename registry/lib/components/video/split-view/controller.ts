@@ -447,7 +447,7 @@ const normalizeRatio = (ratio: number) =>
   Number.isFinite(ratio) ? lodash.clamp(ratio, CONFIG.minLeftRatio, 1) : CONFIG.defaultLeftRatio
 
 const getOrientation = (): SplitOrientation =>
-  matchMedia('(orientation: portrait)').matches ? 'portrait' : 'landscape'
+  window.matchMedia('(orientation: portrait)').matches ? 'portrait' : 'landscape'
 
 export const createSplitViewController = ({
   minRightWidth,
@@ -615,8 +615,8 @@ export const createSplitViewController = ({
     stop()
     const activeRunId = ++runId
     abortController = new AbortController()
-    mediaQuery = matchMedia(`(min-width: ${CONFIG.minViewportWidth}px)`)
-    orientationMediaQuery = matchMedia('(orientation: portrait)')
+    mediaQuery = window.matchMedia(`(min-width: ${CONFIG.minViewportWidth}px)`)
+    orientationMediaQuery = window.matchMedia('(orientation: portrait)')
     currentOrientation = orientationMediaQuery.matches ? 'portrait' : 'landscape'
     splitState.ratio = normalizeRatio(ratios[currentOrientation])
     mediaQuery.addEventListener('change', scheduleReconcile, { signal: abortController.signal })
