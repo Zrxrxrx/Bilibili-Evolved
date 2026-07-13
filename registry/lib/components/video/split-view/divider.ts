@@ -32,6 +32,7 @@ export const createDividerController = (
   let activePointerId: number | null = null
   let currentMinRightWidth = minRightWidth
   let dragChanged = false
+  let dragStartRatio = splitState.ratio
   let lastAppliedRatio = splitState.ratio
   let stopped = false
 
@@ -73,6 +74,10 @@ export const createDividerController = (
   const cancelDrag = () => {
     const pointerId = activePointerId
     activePointerId = null
+    if (pointerId !== null && dragChanged) {
+      splitState.ratio = dragStartRatio
+      applyRatio()
+    }
     dragChanged = false
     if (pointerId !== null && divider.hasPointerCapture?.(pointerId)) {
       try {
@@ -97,6 +102,7 @@ export const createDividerController = (
     divider.setPointerCapture?.(event.pointerId)
     activePointerId = event.pointerId
     dragChanged = false
+    dragStartRatio = splitState.ratio
     window.document.documentElement.classList.add('bsv-dragging')
   }
 
@@ -110,6 +116,9 @@ export const createDividerController = (
     if (event.pointerId === activePointerId) {
       const shouldCommit = event.type === 'pointerup' && dragChanged
       const committedRatio = lastAppliedRatio
+      if (shouldCommit) {
+        dragChanged = false
+      }
       cancelDrag()
       if (shouldCommit) {
         onRatioCommitted(committedRatio)
