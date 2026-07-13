@@ -32,6 +32,7 @@ interface LayoutSession {
   attachDelayedNodes: () => void
   hasReplacementPageRoot: () => boolean
   isHealthy: () => boolean
+  setRatio: (ratio: number) => void
   setMinRightWidth: (width: number) => void
   stop: () => void
 }
@@ -387,6 +388,7 @@ const createLayoutSession = (
       if (nativeFullscreen) {
         divider?.cancelDrag()
       } else {
+        divider?.applyRatio()
         notifyResize()
       }
     }
@@ -413,6 +415,10 @@ const createLayoutSession = (
       shell.leftScroll.contains(pageRoot) &&
       media.isConnected &&
       player.contains(media),
+    setRatio: ratio => {
+      divider?.cancelDrag()
+      divider?.setRatio(ratio)
+    },
     setMinRightWidth: width => divider?.setMinRightWidth(width),
     stop,
   }
@@ -457,17 +463,27 @@ export const createSplitViewController = ({
   let scheduleReconcile: () => void = lodash.noop
   let session: LayoutSession | null = null
   let mediaQuery: MediaQueryList | null = null
+  let orientationMediaQuery: MediaQueryList | null = null
   let pendingCommentProbe: { frame: number; href: string; x: number; y: number } | null = null
   let probedVideo: string | null = null
   let currentMinRightWidth = minRightWidth
-  const currentOrientation = getOrientation()
-  let splitState: SplitState = { ratio: normalizeRatio(ratios[currentOrientation]) }
+  let currentOrientation = getOrientation()
+  const splitState: SplitState = { ratio: normalizeRatio(ratios[currentOrientation]) }
 
   const commitRatio = (ratio: number) => {
     const normalizedRatio = normalizeRatio(ratio)
     splitState.ratio = normalizedRatio
     ratios[currentOrientation] = normalizedRatio
     onRatioCommitted(currentOrientation, normalizedRatio)
+  }
+
+  const setOrientation = (orientation: SplitOrientation) => {
+    if (currentOrientation === orientation) {
+      return
+    }
+    currentOrientation = orientation
+    splitState.ratio = normalizeRatio(ratios[currentOrientation])
+    session?.setRatio(splitState.ratio)
   }
 
   const stopSession = () => {
@@ -588,6 +604,7 @@ export const createSplitViewController = ({
     clearTimeout(reconcileTimer)
     reconcileTimer = 0
     mediaQuery = null
+    orientationMediaQuery = null
     currentVideoId = null
     probedVideo = null
     cancelCommentProbe(true)
@@ -599,7 +616,15 @@ export const createSplitViewController = ({
     const activeRunId = ++runId
     abortController = new AbortController()
     mediaQuery = matchMedia(`(min-width: ${CONFIG.minViewportWidth}px)`)
+    orientationMediaQuery = matchMedia('(orientation: portrait)')
+    currentOrientation = orientationMediaQuery.matches ? 'portrait' : 'landscape'
+    splitState.ratio = normalizeRatio(ratios[currentOrientation])
     mediaQuery.addEventListener('change', scheduleReconcile, { signal: abortController.signal })
+    orientationMediaQuery.addEventListener(
+      'change',
+      event => setOrientation(event.matches ? 'portrait' : 'landscape'),
+      { signal: abortController.signal },
+    )
     ;[documentObserver] = childListSubtree(document, scheduleReconcile)
     urlChange(scheduleReconcile, { signal: abortController.signal })
     videoChange(
@@ -608,7 +633,6 @@ export const createSplitViewController = ({
         if (currentVideoId !== null && currentVideoId !== nextVideoId) {
           cancelCommentProbe(false)
           probedVideo = null
-          splitState = { ratio: CONFIG.defaultLeftRatio }
           stopSession()
         }
         currentVideoId = nextVideoId
