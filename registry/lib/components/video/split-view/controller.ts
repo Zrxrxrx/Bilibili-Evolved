@@ -69,6 +69,7 @@ const createLayoutSession = (
   nodes: SessionNodes,
   splitState: SplitState,
   minRightWidth: number,
+  onRatioCommitted: (ratio: number) => void,
   signal: AbortSignal,
 ): LayoutSession => {
   const { auxiliary, author, comments, header, media, pageRoot, player } = nodes
@@ -374,6 +375,7 @@ const createLayoutSession = (
       minRightWidth,
       splitState,
       () => nativeFullscreen,
+      onRatioCommitted,
     )
     if (fixedHeader) {
       stopHeaderSizeObserver = observeElementSize(fixedHeader, notifyResize)
@@ -422,7 +424,30 @@ export interface SplitViewController {
   stop: () => void
 }
 
-export const createSplitViewController = (minRightWidth: number): SplitViewController => {
+export type SplitOrientation = 'landscape' | 'portrait'
+
+export interface SplitRatios {
+  landscape: number
+  portrait: number
+}
+
+interface SplitViewControllerOptions {
+  minRightWidth: number
+  ratios: SplitRatios
+  onRatioCommitted: (orientation: SplitOrientation, ratio: number) => void
+}
+
+const normalizeRatio = (ratio: number) =>
+  Number.isFinite(ratio) ? lodash.clamp(ratio, CONFIG.minLeftRatio, 1) : CONFIG.defaultLeftRatio
+
+const getOrientation = (): SplitOrientation =>
+  matchMedia('(orientation: portrait)').matches ? 'portrait' : 'landscape'
+
+export const createSplitViewController = ({
+  minRightWidth,
+  ratios,
+  onRatioCommitted,
+}: SplitViewControllerOptions): SplitViewController => {
   let abortController: AbortController | null = null
   let documentObserver: MutationObserver | null = null
   let currentVideoId: string | null = null
@@ -435,7 +460,15 @@ export const createSplitViewController = (minRightWidth: number): SplitViewContr
   let pendingCommentProbe: { frame: number; href: string; x: number; y: number } | null = null
   let probedVideo: string | null = null
   let currentMinRightWidth = minRightWidth
-  let splitState: SplitState = { ratio: CONFIG.defaultLeftRatio }
+  const currentOrientation = getOrientation()
+  let splitState: SplitState = { ratio: normalizeRatio(ratios[currentOrientation]) }
+
+  const commitRatio = (ratio: number) => {
+    const normalizedRatio = normalizeRatio(ratio)
+    splitState.ratio = normalizedRatio
+    ratios[currentOrientation] = normalizedRatio
+    onRatioCommitted(currentOrientation, normalizedRatio)
+  }
 
   const stopSession = () => {
     session?.stop()
@@ -524,7 +557,13 @@ export const createSplitViewController = (minRightWidth: number): SplitViewContr
     if (maybeProbeComments(nodes)) {
       return
     }
-    session = createLayoutSession(nodes, splitState, currentMinRightWidth, abortController.signal)
+    session = createLayoutSession(
+      nodes,
+      splitState,
+      currentMinRightWidth,
+      commitRatio,
+      abortController.signal,
+    )
   }
 
   scheduleReconcile = () => {

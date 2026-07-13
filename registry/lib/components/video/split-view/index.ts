@@ -9,11 +9,22 @@ import {
   removeComponentListener,
 } from '@/core/settings'
 import { getNumberValidator } from '@/core/utils'
-import { createSplitViewController, SplitViewController } from './controller'
+import { createSplitViewController, SplitOrientation, SplitViewController } from './controller'
+import { CONFIG } from './dom'
 
 const name = 'videoSplitView'
 const minRightWidthPath = `${name}.minRightWidth`
 const options = defineOptionsMetadata({
+  landscapeLeftRatio: {
+    defaultValue: Number(CONFIG.defaultLeftRatio),
+    hidden: true,
+    validator: getNumberValidator(CONFIG.minLeftRatio, 1),
+  },
+  portraitLeftRatio: {
+    defaultValue: Number(CONFIG.defaultLeftRatio),
+    hidden: true,
+    validator: getNumberValidator(CONFIG.minLeftRatio, 1),
+  },
   minRightWidth: {
     displayName: '右侧评论区最小宽度 (px)',
     defaultValue: 320,
@@ -36,8 +47,23 @@ const setMinRightWidth = (width: number) => {
 
 const load = () => {
   controller?.stop()
-  const { minRightWidth } = getComponentSettings<Options>(name).options
-  controller = createSplitViewController(minRightWidth)
+  const settings = getComponentSettings<Options>(name)
+  const { landscapeLeftRatio, minRightWidth, portraitLeftRatio } = settings.options
+  const setRatio = (orientation: SplitOrientation, ratio: number) => {
+    if (orientation === 'portrait') {
+      settings.options.portraitLeftRatio = ratio
+    } else {
+      settings.options.landscapeLeftRatio = ratio
+    }
+  }
+  controller = createSplitViewController({
+    minRightWidth,
+    ratios: {
+      landscape: landscapeLeftRatio,
+      portrait: portraitLeftRatio,
+    },
+    onRatioCommitted: setRatio,
+  })
   controller.start()
   if (!settingsListenerAttached) {
     addComponentListener(minRightWidthPath, setMinRightWidth)
