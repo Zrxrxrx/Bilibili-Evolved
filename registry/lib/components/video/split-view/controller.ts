@@ -149,7 +149,7 @@ const createLayoutSession = (
     if (stopped || nativeFullscreen || resizeFrame !== 0) {
       return
     }
-    resizeFrame = requestAnimationFrame(() => {
+    resizeFrame = window.requestAnimationFrame(() => {
       syncHeaderOffset()
       syncPlayerSize()
       window.dispatchEvent(new Event('resize'))
@@ -266,7 +266,7 @@ const createLayoutSession = (
     stopped = true
     sessionAbortController.abort()
     if (resizeFrame !== 0) {
-      cancelAnimationFrame(resizeFrame)
+      window.cancelAnimationFrame(resizeFrame)
       resizeFrame = 0
     }
     divider?.stop()
@@ -497,9 +497,9 @@ export const createSplitViewController = ({
       return
     }
     pendingCommentProbe = null
-    cancelAnimationFrame(probe.frame)
+    window.cancelAnimationFrame(probe.frame)
     if (restoreScroll && location.href === probe.href) {
-      scrollTo(probe.x, probe.y)
+      window.scrollTo(probe.x, probe.y)
     }
   }
 
@@ -520,13 +520,13 @@ export const createSplitViewController = ({
       y: scrollY,
     }
     anchor.scrollIntoView({ block: 'center' })
-    probe.frame = requestAnimationFrame(() => {
+    probe.frame = window.requestAnimationFrame(() => {
       if (pendingCommentProbe !== probe) {
         return
       }
       pendingCommentProbe = null
       if (location.href === probe.href) {
-        scrollTo(probe.x, probe.y)
+        window.scrollTo(probe.x, probe.y)
         scheduleReconcile()
       }
     })
@@ -586,7 +586,7 @@ export const createSplitViewController = ({
     const activeRunId = runId
     const generation = ++reconcileGeneration
     const expectedVideoId = currentVideoId
-    clearTimeout(reconcileTimer)
+    window.clearTimeout(reconcileTimer)
     reconcileTimer = window.setTimeout(() => {
       reconcile(activeRunId, generation, expectedVideoId).catch(error => {
         console.warn('[videoSplitView] reconcile failed', error)
@@ -601,7 +601,7 @@ export const createSplitViewController = ({
     abortController = null
     documentObserver?.disconnect()
     documentObserver = null
-    clearTimeout(reconcileTimer)
+    window.clearTimeout(reconcileTimer)
     reconcileTimer = 0
     mediaQuery = null
     orientationMediaQuery = null
