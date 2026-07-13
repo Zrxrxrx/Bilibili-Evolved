@@ -49,7 +49,7 @@ const load = () => {
   controller?.stop()
   const settings = getComponentSettings<Options>(name)
   const { landscapeLeftRatio, minRightWidth, portraitLeftRatio } = settings.options
-  const setRatio = (orientation: SplitOrientation, ratio: number) => {
+  const persistRatio = (orientation: SplitOrientation, ratio: number) => {
     if (orientation === 'portrait') {
       settings.options.portraitLeftRatio = ratio
     } else {
@@ -62,7 +62,7 @@ const load = () => {
       landscape: landscapeLeftRatio,
       portrait: portraitLeftRatio,
     },
-    onRatioCommitted: setRatio,
+    onRatioCommitted: persistRatio,
   })
   controller.start()
   if (!settingsListenerAttached) {
