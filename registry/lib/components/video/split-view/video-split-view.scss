@@ -210,12 +210,12 @@ html.bsv-active body {
   left: 50%;
   display: grid;
   place-items: center;
-  width: 24px;
-  height: 56px;
+  width: 18px;
+  height: 36px;
   content: '⋮';
   transform: translate(-50%, -50%);
   border: 1px solid #9ddff5;
-  border-radius: 12px;
+  border-radius: 9px;
   color: #00aeec;
   background: var(--bsv-surface);
 }
