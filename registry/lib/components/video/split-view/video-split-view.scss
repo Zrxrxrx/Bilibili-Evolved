@@ -9,14 +9,14 @@ html.bsv-active body {
   --bsv-left-width: 64%;
   --bsv-top-offset: 0px;
   --bsv-header-gap: 8px;
-  --bsv-canvas: #f6f7f8;
-  --bsv-surface: var(--be-color-panel-bg, #fff);
-  --bsv-border: var(--be-color-panel-border, #e3e5e7);
-  --bsv-divider: var(--be-color-button-bg, #eef1f4);
-  --bsv-divider-border: var(--be-color-button-border, #d9dde2);
-  --bsv-divider-hover: var(--be-color-button-bg-hover, #dff6fe);
-  --bsv-text: var(--be-color-text-title, #18191c);
-  --bsv-muted: var(--be-color-text-placeholder, #9499a0);
+  --bsv-canvas: var(--be-color-panel-bg, var(--bg3, #f6f7f8));
+  --bsv-surface: var(--be-color-card-bg, var(--bg1, #fff));
+  --bsv-border: var(--be-color-card-border, var(--line_regular, #e3e5e7));
+  --bsv-divider: var(--be-color-button-bg, var(--graph_bg_regular, #eef1f4));
+  --bsv-divider-border: var(--be-color-button-border, var(--line_regular, #d9dde2));
+  --bsv-divider-hover: var(--be-color-button-bg-hover, var(--graph_bg_thin, #dff6fe));
+  --bsv-text: var(--be-color-text-title, var(--text1, #18191c));
+  --bsv-muted: var(--be-color-text-placeholder, var(--text3, #9499a0));
   --bsv-accent: var(--be-color-accent, #00aeec);
   --bsv-shadow: rgb(0 0 0 / 6%);
   position: fixed;
@@ -327,7 +327,8 @@ html.bsv-dragging * {
 }
 
 body.dark #bsv-shell,
-html.night-mode #bsv-shell {
+html.night-mode #bsv-shell,
+html.bili_dark #bsv-shell {
   --bsv-canvas: var(--be-color-panel-bg, #0f1012);
   --bsv-surface: var(--be-color-card-bg, #18191c);
   --bsv-border: var(--be-color-card-border, #34373b);
@@ -340,7 +341,8 @@ html.night-mode #bsv-shell {
   color-scheme: dark;
 }
 
-html.night-mode #bsv-shell {
+html.night-mode #bsv-shell,
+html.bili_dark #bsv-shell {
   --bsv-canvas: var(--bg3, #0a0b0c);
   --bsv-surface: var(--bg1, #17181a);
   --bsv-border: var(--line_regular, #2f3134);
@@ -354,7 +356,9 @@ html.night-mode #bsv-shell {
 body.dark #bsv-left-pane .bpx-player-sending-bar,
 body.dark #bsv-left-scroll .bpx-docker,
 html.night-mode #bsv-left-pane .bpx-player-sending-bar,
-html.night-mode #bsv-left-scroll .bpx-docker {
+html.night-mode #bsv-left-scroll .bpx-docker,
+html.bili_dark #bsv-left-pane .bpx-player-sending-bar,
+html.bili_dark #bsv-left-scroll .bpx-docker {
   background: var(--bsv-surface) !important;
 }
 
@@ -365,12 +369,17 @@ body.dark #bsv-left-scroll .bui-collapse-header,
 html.night-mode #bsv-left-pane .bpx-player-video-inputbar,
 html.night-mode #bsv-left-scroll .tag-link,
 html.night-mode #bsv-left-scroll .danmaku-wrap,
-html.night-mode #bsv-left-scroll .bui-collapse-header {
+html.night-mode #bsv-left-scroll .bui-collapse-header,
+html.bili_dark #bsv-left-pane .bpx-player-video-inputbar,
+html.bili_dark #bsv-left-scroll .tag-link,
+html.bili_dark #bsv-left-scroll .danmaku-wrap,
+html.bili_dark #bsv-left-scroll .bui-collapse-header {
   color: var(--bsv-text) !important;
   background: var(--bsv-divider) !important;
 }
 
 body.dark #bsv-left-pane .bpx-player-dm-input,
-html.night-mode #bsv-left-pane .bpx-player-dm-input {
+html.night-mode #bsv-left-pane .bpx-player-dm-input,
+html.bili_dark #bsv-left-pane .bpx-player-dm-input {
   color: var(--bsv-text) !important;
 }
